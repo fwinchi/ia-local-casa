@@ -1,0 +1,5 @@
+FROM qwen3-vl:8b
+PARAMETER num_ctx 16384
+PARAMETER temperature 0.1
+PARAMETER top_k 20
+PARAMETER top_p 0.95

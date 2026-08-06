@@ -1,0 +1,9 @@
+scripts/secrets.local.bat
+docker/**/.env
+
+# Documento interno de trabajo, no se publica
+CONTEXTO-PROYECTO.md
+
+# Bytecode de Python
+__pycache__/
+*.pyc
