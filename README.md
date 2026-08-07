@@ -131,7 +131,7 @@ Instálalo y déjalo en marcha (con integración WSL2 si vas a usar la GPU para 
 
 ### 4.6 Ollama y los modelos locales
 
-Instala Ollama (nativo en Windows, no en Docker) y descarga los dos modelos base:
+Instala Ollama (nativo en Windows, no en Docker) y descarga estos cuatro modelos base:
 
 ```
 ollama pull gpt-oss:20b
@@ -200,7 +200,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
 | `indexar_pdfs.py` | Indexa los PDFs de las carpetas configuradas. Si uno no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta. |
-| `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados` y `abrir_pdf`. |
+| `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados` y `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas). |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos` y `estadisticas_fotos`; genera una galería HTML con los resultados. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
@@ -331,7 +331,7 @@ Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ej
 
 - Los secretos (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en archivos `.env` / `secrets.local.bat` que están en `.gitignore`. Nunca los subas al repositorio, ni siquiera en un commit temporal que luego borres — el historial de git los conservaría.
 - No reutilices los valores de ejemplo de este README ni de los `.env.example`: genera los tuyos propios en cada instalación.
-- Los puertos de Paperless (8010), mcpo (8001-8004) e Immich (2283) no llevan más autenticación que la propia de cada aplicación. Están pensados para tu red local; no los expongas a internet sin añadir tu propia capa de autenticación o VPN.
+- Seis servicios están restringidos a `127.0.0.1` y no son alcanzables desde ningún otro dispositivo de tu red: los cuatro `mcpo` (8001, 8002, 8003, 8004), LiteLLM (4000) e ImmichMCP (5000). Paperless (8010) e Immich (2283) se dejan deliberadamente accesibles en tu red local — sin eso no podrías usarlos desde el móvil — y no llevan más autenticación que la propia de cada aplicación. No los expongas a internet sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) puede alcanzarlos igual que tu móvil.
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
 
 ## 10. Guía de uso diaria
@@ -343,7 +343,7 @@ Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ej
 | Consultar facturas y recibos | `gptoss-paperless` | Paperless |
 | Consultar informes, pólizas, trámites | `gptoss-paperless` | PDFs OneDrive |
 | Buscar fotos o vídeos del disco externo | `gptoss-paperless` | Fotos Disco Externo |
-| Buscar fotos por persona o cara | `gptoss-paperless` | Immich |
+| Buscar fotos por persona o cara | `gptoss-paperless` | ImmichMCP |
 | Preguntar cosas del mundo | `gemini-flash` | *ninguna* |
 | Charlar o preguntas rápidas | `gemma` | *ninguna* |
 | Algo que necesite más calidad | `gemini-pro` | *ninguna* |
@@ -388,7 +388,7 @@ Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ej
 
 **Dónde:** Immich, `http://localhost:2283`.
 
-**O hablando:** Open WebUI, modelo `gptoss-paperless`, herramienta **Immich**.
+**O hablando:** Open WebUI, modelo `gptoss-paperless`, herramienta **ImmichMCP** (así aparece en el selector).
 
 ### 5. Dictar en vez de escribir
 
