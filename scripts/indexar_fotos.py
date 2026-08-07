@@ -29,7 +29,7 @@ except Exception:
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "OrangePi Externo"
+ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 CHROMA_PATH = str(BASE / "chroma")
 COLECCION = "fotos"

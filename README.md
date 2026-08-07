@@ -210,8 +210,11 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `organizar_fotos.py` | Reordena las fotos del disco externo en carpetas `AAAA\MM-Mes` según la fecha EXIF (o el nombre del archivo como respaldo). Por defecto solo simula; hace falta `--aplicar`. |
 | `organizador.py` | Organiza la carpeta de Descargas por tipo de archivo (Imágenes, PDFs, Documentos, Instaladores...). |
 | `oculto.vbs` | Lanza el `.bat` que se le pase como argumento sin mostrar ventana. |
+| `salud.py` | Comprueba el estado de todo el stack (puertos mcpo, contenedores Docker, Ollama, LiteLLM, tareas programadas, ChromaDB, carpeta `consume`, disco externo, cuarentena de duplicados...) y genera `salud.html` con el resultado. Se ejecuta a mano con `salud.bat`, no tiene tarea programada. |
 
 *(Aviso: `buscar.py` y `organizador.py` no estaban en la tabla original de `CONTEXTO-PROYECTO.md` sección 4 — los añadí porque existen en `scripts\` y hacen algo distinto al resto.)*
+
+`salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`).
 
 ## 6. Los prompts
 
@@ -255,6 +258,7 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
 - **`run-indexar.bat`**, **`run-organizador.bat`** — cada uno llama a su script Python correspondiente; se lanzan a través de `oculto.vbs` para no mostrar consola.
 - **`start-mcp-fotos.bat`**, **`start-mcp-pdfs.bat`**, **`start-mcp-immich.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
 - **`run-duplicados.bat`** — no tiene tarea programada propia. Es un lanzador manual para forzar una revisión de duplicados fuera del ciclo automático de `vigilante-duplicados` (que ya hace su propia comprobación llamando directamente a `revisar.py` desde `vigilante.py`).
+- **`salud.bat`** — tampoco tiene tarea programada. Es para ejecutar a mano cuando quieras un diagnóstico del stack; por eso, a diferencia de los demás `.bat`, termina con `pause` (para poder leer el resultado en la consola) y no pasa por `oculto.vbs`.
 
 ### Las tareas programadas reales
 

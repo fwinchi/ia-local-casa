@@ -12,7 +12,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-ETIQUETA_DISCO = "OrangePi Externo"
+ETIQUETA_DISCO = "Multimedia IA"
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 PYTHON = str(Path.home() / "AppData/Local/Python/bin/python.exe")
 REVISAR = SCRIPTS / "revisar.py"

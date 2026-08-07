@@ -22,7 +22,7 @@ import requests
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "OrangePi Externo"
+ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_VIDEOS = "VIDEOS"
 CHROMA_PATH = str(BASE / "chroma")
 COLECCION = "videos"

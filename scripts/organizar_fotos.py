@@ -22,7 +22,7 @@ except Exception:
 
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "OrangePi Externo"
+ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 SIN_FECHA = "Sin fecha"
 INFORME = SCRIPTS / "organizacion_fotos.txt"
