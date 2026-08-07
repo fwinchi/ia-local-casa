@@ -78,7 +78,9 @@ Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura
 | mcpo | Windows, puertos 8001–8004 | Convierte MCP en OpenAPI para Open WebUI |
 | OpenWhispr | Windows | Dictado por voz (Parakeet TDT 0.6B) |
 
-**Puertos mcpo:** 8001 Paperless · 8002 PDFs · 8003 Fotos/Vídeos · 8004 Immich.
+**Puertos mcpo:** 8001 Paperless · 8002 PDFs · 8003 Fotos/Vídeos · 8004 ImmichMCP.
+
+**Acceso desde la red:** mcpo (8001-8004), LiteLLM (4000) e ImmichMCP (5000) escuchan solo en `127.0.0.1` — no alcanzables desde otros dispositivos. Paperless (8010) e Immich (2283) sí son accesibles en tu red local (detalle en la sección 9).
 
 **Modelos Ollama en uso:** `gptoss-paperless` (gpt-oss:20b, `num_ctx` 16384, temp 0.1), `vl3-paperless` (qwen3-vl:8b, visión), `bge-m3` (embeddings de documentos), `nomic-embed-text` (embeddings de fotos y vídeos, heredado).
 
@@ -211,8 +213,6 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `organizador.py` | Organiza la carpeta de Descargas por tipo de archivo (Imágenes, PDFs, Documentos, Instaladores...). |
 | `oculto.vbs` | Lanza el `.bat` que se le pase como argumento sin mostrar ventana. |
 | `salud.py` | Comprueba el estado de todo el stack (puertos mcpo, contenedores Docker, Ollama, LiteLLM, tareas programadas, ChromaDB, carpeta `consume`, disco externo, cuarentena de duplicados...) y genera `salud.html` con el resultado. Se ejecuta a mano con `salud.bat`, no tiene tarea programada. |
-
-*(Aviso: `buscar.py` y `organizador.py` no estaban en la tabla original de `CONTEXTO-PROYECTO.md` sección 4 — los añadí porque existen en `scripts\` y hacen algo distinto al resto.)*
 
 `salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`). **Es sensible**: enumera tareas programadas, contenedores Docker, versiones de modelos, espacio libre en disco y estado de la carpeta `consume` — un inventario bastante completo de tu instalación. No lo compartas ni lo subas a ningún sitio.
 
@@ -433,7 +433,7 @@ Deben salir los cuatro. Si falta alguno, lanzarlo a mano:
 | 8001 | Paperless | `<TU_RAIZ>\scripts\start-mcpo.bat` |
 | 8002 | PDFs OneDrive | `<TU_RAIZ>\scripts\start-mcp-pdfs.bat` |
 | 8003 | Fotos Disco Externo | `<TU_RAIZ>\scripts\start-mcp-fotos.bat` |
-| 8004 | Immich | `<TU_RAIZ>\scripts\start-mcp-immich.bat` |
+| 8004 | ImmichMCP | `<TU_RAIZ>\scripts\start-mcp-immich.bat` |
 
 > Todos tienen tarea programada al iniciar sesión. Si uno falla siempre, hay que revisar su tarea.
 
