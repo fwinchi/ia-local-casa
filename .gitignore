@@ -10,3 +10,6 @@ __pycache__/
 
 # Informe generado por salud.py, no se versiona
 scripts/salud.html
+
+# Bundle de auditoría para revisión externa, no se versiona
+auditoria.txt

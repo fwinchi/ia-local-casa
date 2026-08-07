@@ -5,6 +5,6 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -64,7 +64,11 @@ def ocr_en_sitio(ruta):
     try:
         BACKUP.mkdir(parents=True, exist_ok=True)
         PUENTE.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ruta, BACKUP / ruta.name)
+        # Nombre de backup único por ruta de origen: dos PDFs con el mismo
+        # nombre en carpetas distintas (p.ej. "factura.pdf" en OneDrive y en
+        # Documentos) ya no se pisan el backup entre sí.
+        sufijo = hashlib.md5(str(ruta).encode()).hexdigest()[:8]
+        shutil.copy2(ruta, BACKUP / f"{ruta.stem}_{sufijo}{ruta.suffix}")
         tmp = PUENTE / ruta.name
         shutil.copy2(ruta, tmp)
         dentro = f"/usr/src/paperless/export/ocr_auto/{ruta.name}"

@@ -296,6 +296,13 @@ Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ej
   `host.docker.internal`. Esta inversión costó una tarde.
 - **Una sola herramienta activada por chat**: con varias, el modelo local llama a la
   que no toca.
+- **mcpo se queda con la sesión colgada si reinicias el servicio al que apunta.** Al
+  recrear el contenedor de ImmichMCP (puerto 5000) para cambiar su binding a
+  `127.0.0.1`, el `mcpo` del puerto 8004 (que le habla por `streamablehttp`) siguió
+  vivo pero empezó a devolver "Session terminated" — se había quedado con la sesión
+  MCP anterior, ya inválida. Hubo que reiniciar también ese `mcpo`. Norma: al tocar
+  cualquier servicio detrás de un puente `mcpo`, reinicia el puente también, no solo
+  el servicio.
 - **Modelos locales y mundo exterior**: `gpt-oss:20b` inventa y defiende lo inventado.
   Ningún prompt de anclaje lo arregla. Local para documentos propios, nube para el
   resto.
@@ -315,6 +322,8 @@ Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ej
 - **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_pdf`.
 - **La detección de duplicados nunca borra nada por sí sola.** `duplicados.py`/`revisar.py` generan un informe; `limpiar.py` solo mueve a cuarentena, y solo tras escribir "SI" explícitamente. Borrar de verdad es un paso manual tuyo, aparte.
 - **No hay copia de seguridad automática de nada** — ni de la base de datos de Paperless, ni de ChromaDB, ni de las fotos. Este repo no incluye una estrategia de backup; tienes que montarla tú aparte.
+- **El OCR sobrescribe el PDF original en su ubicación real** (`indexar_pdfs.py`, función `ocr_en_sitio`), no solo la copia de seguridad. Si esa carpeta está sincronizada con OneDrive — como las dos que se indexan por defecto —, el cambio dispara una re-subida a la nube y una entrada nueva en su historial de versiones. No hay forma de evitarlo sin dejar de tocar el original.
+- **El backup previo al OCR se nombra por ruta de origen, no solo por nombre de archivo** (`backup_pdfs/nombre_HASH.pdf`) — así, dos PDFs con el mismo nombre en carpetas distintas (p. ej. `factura.pdf` en OneDrive y en Documentos) no se pisan la copia de seguridad entre sí.
 - **Todo el stack asume español**: el OCR de Paperless está fijado a `spa`, y los prompts están escritos en español. Usarlo en otro idioma implica tocar configuración y prompts.
 - **Es un único PC, sin redundancia.** Si está apagado, no hay indexado, ni Paperless, ni herramientas en Open WebUI.
 
