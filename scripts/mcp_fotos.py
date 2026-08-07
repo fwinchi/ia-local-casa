@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 from datetime import datetime
+from html import escape
 from pathlib import Path
 
 import chromadb
@@ -99,22 +100,28 @@ def galeria(consulta, items, es_video):
             b64 = miniatura_video(ruta) if es_video else miniatura_foto(ruta)
         img = (f'<img src="data:image/jpeg;base64,{b64}">' if b64
                else '<div class="sinimg">sin vista previa</div>')
-        extra = (f" &middot; {meta.get('duracion','?')} &middot; {meta.get('resolucion','?')}"
+        nombre_esc = escape(meta.get('nombre', ''))
+        carpeta_esc = escape(str(meta.get('carpeta', '.')))
+        fecha_esc = escape(str(meta.get('fecha', '?')))
+        desc_esc = escape(doc)
+        ruta_href = escape(str(ruta).replace(chr(92), '/'))
+        extra = (f" &middot; {escape(str(meta.get('duracion','?')))} &middot; {escape(str(meta.get('resolucion','?')))}"
                  if es_video else "")
         play = '<div class="play">&#9654;</div>' if es_video else ""
         cards.append(f"""
         <div class="card">
-          <a href="file:///{str(ruta).replace(chr(92), '/')}" target="_blank">
+          <a href="file:///{ruta_href}" target="_blank">
             <div class="wrap">{img}{play}</div>
           </a>
-          <div class="nombre">{meta.get('nombre','')}</div>
-          <div class="meta">{meta.get('fecha','?')} &middot; {meta.get('carpeta','.')}{extra} &middot; {1-dist:.0%}</div>
-          <div class="desc">{doc}</div>
+          <div class="nombre">{nombre_esc}</div>
+          <div class="meta">{fecha_esc} &middot; {carpeta_esc}{extra} &middot; {1-dist:.0%}</div>
+          <div class="desc">{desc_esc}</div>
         </div>""")
 
     tipo = "Videos" if es_video else "Fotos"
+    consulta_esc = escape(consulta)
     html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-<title>{tipo}: {consulta}</title><style>
+<title>{tipo}: {consulta_esc}</title><style>
  body{{font-family:system-ui,sans-serif;background:#14161a;color:#e6e6e6;margin:0;padding:24px}}
  h1{{font-size:20px}} h1 small{{color:#888;font-weight:400}}
  .rej{{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px}}
@@ -129,7 +136,7 @@ def galeria(consulta, items, es_video):
  .desc{{font-size:12px;color:#bbb;margin-top:7px;line-height:1.45}}
  .vacio{{color:#888}}
 </style></head><body>
-<h1>{tipo}: "{consulta}" <small>{len(items)} resultados &middot; {datetime.now():%d/%m %H:%M}</small></h1>
+<h1>{tipo}: "{consulta_esc}" <small>{len(items)} resultados &middot; {datetime.now():%d/%m %H:%M}</small></h1>
 <p style="color:#888;font-size:13px">Haz clic para abrir el archivo original.</p>
 <div class="rej">{''.join(cards) if cards else '<p class="vacio">Sin resultados.</p>'}</div>
 </body></html>"""

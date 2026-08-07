@@ -9,6 +9,7 @@ import io
 import json
 import subprocess
 from datetime import datetime
+from html import escape
 from pathlib import Path
 
 from PIL import Image
@@ -142,15 +143,18 @@ def tarjeta(p, es_foto, conservar, distancia=None):
     img = (f'<img src="data:image/jpeg;base64,{b64}">' if b64
            else '<div class="sinimg">sin miniatura</div>')
     chk = "" if conservar else "checked"
+    ruta_esc = escape(str(p))
+    nombre_esc = escape(p.name)
+    dir_esc = escape(str(p.parent))
     etq = ("<span class=\"badge ok\">CONSERVAR</span>" if conservar
-           else f'<label class="badge del"><input type="checkbox" data-ruta="{p}" {chk}> borrar</label>')
+           else f'<label class="badge del"><input type="checkbox" data-ruta="{ruta_esc}" {chk}> borrar</label>')
     return f"""
     <div class="card {clase}">
       {img}
       <div class="meta">{etq}</div>
       <div class="meta">{res} · {mb:.2f} MB{dist}</div>
-      <div class="ruta" title="{p}">{p.name}</div>
-      <div class="ruta dir">{p.parent}</div>
+      <div class="ruta" title="{ruta_esc}">{nombre_esc}</div>
+      <div class="ruta dir">{dir_esc}</div>
     </div>"""
 
 
@@ -222,7 +226,7 @@ def main():
 <h1>Revisión de duplicados <small style="color:#888;font-weight:400">{datetime.now():%d/%m/%Y %H:%M}</small></h1>
 <p style="color:#aaa;font-size:14px;max-width:760px">Verde = se conserva. Rojo = marcado para borrar.
 Desmarca la casilla de cualquier foto que <b>no</b> quieras perder. Al final, pulsa el botón y guarda
-el archivo en <code>D:\\paperless\\scripts\\</code>.</p>
+el archivo en <code>{SCRIPTS}</code>.</p>
 {''.join(partes)}
 <div class="barra">
   <button onclick="exportar()">Descargar lista de borrado</button>

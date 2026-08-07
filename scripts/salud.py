@@ -2,6 +2,7 @@
 """Comprueba el estado del stack y genera un informe HTML."""
 import locale, os, re, json, socket, subprocess, urllib.request, webbrowser
 from datetime import datetime, timedelta
+from html import escape
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
@@ -307,7 +308,7 @@ for cat in cats:
     filas += f'<h2 class="{peor}">{cat}</h2><table>'
     for _, titulo, estado, detalle in grupo:
         filas += (f'<tr class="{estado}"><td class="et">{ICONO[estado]}</td>'
-                  f'<td class="ti">{titulo}</td><td class="de">{detalle}</td></tr>')
+                  f'<td class="ti">{escape(str(titulo))}</td><td class="de">{escape(str(detalle))}</td></tr>')
     filas += "</table>"
 
 fecha_txt = (datetime.now().strftime('%A %d de %B de %Y, %H:%M') if FECHA_LOCALE_OK

@@ -15,6 +15,13 @@ CARPETA_DB = str(BASE / "chroma")
 OLLAMA = "http://localhost:11434/api/embeddings"
 MODELO = "bge-m3"
 
+# Las mismas carpetas que indexa indexar_pdfs.py. abrir_pdf solo puede abrir
+# archivos dentro de ellas, nunca una ruta arbitraria del sistema.
+CARPETAS_PDFS = [
+    (Path.home() / "OneDrive" / "Documentos").resolve(),
+    (Path.home() / "Documents" / "Documentos para indexar").resolve(),
+]
+
 mcp = FastMCP("pdfs-onedrive")
 
 cliente = chromadb.PersistentClient(path=CARPETA_DB)
@@ -83,11 +90,15 @@ def abrir_pdf(ruta: str) -> str:
         ruta: ruta completa del archivo, tal como aparece en los resultados.
     """
     import os
-    if not os.path.isfile(ruta):
+    ruta_path = Path(ruta).resolve()
+    if not any(ruta_path.is_relative_to(c) for c in CARPETAS_PDFS):
+        return (f"Ruta no permitida: {ruta}. abrir_pdf solo puede abrir archivos "
+                f"dentro de las carpetas indexadas ({', '.join(str(c) for c in CARPETAS_PDFS)}).")
+    if not ruta_path.is_file():
         return f"No existe el archivo: {ruta}"
-    if not ruta.lower().endswith(".pdf"):
+    if ruta_path.suffix.lower() != ".pdf":
         return "Solo se pueden abrir archivos PDF."
-    os.startfile(ruta)
-    return f"Abierto en el visor de Windows: {os.path.basename(ruta)}"
+    os.startfile(str(ruta_path))
+    return f"Abierto en el visor de Windows: {ruta_path.name}"
 if __name__ == "__main__":
     mcp.run()

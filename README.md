@@ -214,7 +214,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 
 *(Aviso: `buscar.py` y `organizador.py` no estaban en la tabla original de `CONTEXTO-PROYECTO.md` sección 4 — los añadí porque existen en `scripts\` y hacen algo distinto al resto.)*
 
-`salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`).
+`salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`). **Es sensible**: enumera tareas programadas, contenedores Docker, versiones de modelos, espacio libre en disco y estado de la carpeta `consume` — un inventario bastante completo de tu instalación. No lo compartas ni lo subas a ningún sitio.
 
 ## 6. Los prompts
 
@@ -457,6 +457,15 @@ documentación.
 El mérito de Claude está en no haberme dejado solo ante los mensajes de error a las
 once de la noche. Los aciertos son compartidos; los fallos, todos míos, y varios de
 los suyos están apuntados en la sección «Lo que aprendí a base de fallar».
+
+Antes de publicar, el repo pasó por una revisión de seguridad y privacidad por
+capas: revisiones cruzadas de Gemini 3.1 Pro, Kimi K3 y Grok Fast, cada una
+verificada contra el código real (no aceptada de oficio) por Claude Code, más
+`gitleaks` y TruffleHog 3.96.0 sobre el historial completo de commits,
+ejecutados por el autor vía Docker (`gitleaks`: 2 commits, ~125 KB, sin
+hallazgos; TruffleHog, modo filesystem `--results=verified,unknown`: 144
+chunks, 390 KB, 0 secretos). Esto es revisión asistida por IA y herramientas
+automáticas, no una auditoría de seguridad profesional.
 
 ### Licencia
 

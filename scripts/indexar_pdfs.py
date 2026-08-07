@@ -77,7 +77,19 @@ def ocr_en_sitio(ruta):
              "-l", "spa", "--skip-text", "--output-type", "pdf", dentro, dentro],
             capture_output=True, text=True)
         if r.returncode == 0 and tmp.stat().st_size > 0:
-            shutil.copy2(tmp, ruta)
+            # Escritura atómica: Path.replace() es atómico solo dentro del
+            # mismo disco, y PUENTE puede estar en una unidad distinta a la
+            # del original (p.ej. D: vs C:\...\OneDrive). Se copia primero a
+            # un temporal EN EL MISMO DISCO que ruta, y solo se sustituye el
+            # original cuando esa copia ha terminado bien y no está vacía.
+            tmp_mismo_disco = ruta.with_name(f"{ruta.stem}.ocr_tmp{ruta.suffix}")
+            shutil.copy2(tmp, tmp_mismo_disco)
+            if tmp_mismo_disco.stat().st_size == 0:
+                tmp_mismo_disco.unlink(missing_ok=True)
+                tmp.unlink()
+                print("  OCR generó un archivo vacío, no se sustituye el original.")
+                return False
+            tmp_mismo_disco.replace(ruta)
             tmp.unlink()
             return True
         tmp.unlink(missing_ok=True)

@@ -8,8 +8,14 @@ CONTEXTO-PROYECTO.md
 __pycache__/
 *.pyc
 
-# Informe generado por salud.py, no se versiona
-scripts/salud.html
+# Datos y salidas generadas en tiempo de ejecución, no se versionan
+chroma/
+backup_pdfs/
+cuarentena_duplicados/
+*.log
+scripts/*.html
+scripts/*.txt
+scripts/*.json
 
 # Bundle de auditoría para revisión externa, no se versiona
 auditoria.txt
