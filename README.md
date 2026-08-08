@@ -360,7 +360,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **El modelo local puede inventar.** `gpt-oss:20b` inventa cuando le preguntas algo que no está en tus documentos, y defiende lo inventado si insistes (sección 8). No lo uses como fuente de verdad fuera de tus propios archivos.
 - **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_pdf`.
 - **La detección de duplicados nunca borra nada por sí sola.** `duplicados.py`/`revisar.py` generan un informe; `limpiar.py` solo mueve a cuarentena, y solo tras escribir "SI" explícitamente. Borrar de verdad es un paso manual tuyo, aparte.
-- **No hay copia de seguridad automática de nada** — ni de la base de datos de Paperless, ni de ChromaDB, ni de las fotos. Este repo no incluye una estrategia de backup; tienes que montarla tú aparte.
+- **Hay un script de backup, pero no forma parte de este repo ni está probada su restauración.** `backup-orangepi.bat` (fuera del repo, en la instalación real del autor) copia el volcado de Paperless, ChromaDB, fotos y vídeos a un Raspberry/Orange Pi por red (`scp`/`rsync` vía WSL). ChromaDB se sincroniza como espejo exacto (`--delete`, es un índice reconstruible); fotos y vídeos se acumulan sin `--delete` a propósito, para no arriesgarse a borrar la copia buena si el disco externo falla o se desmonta mal. Nunca se ha probado restaurar desde esa copia (ver «Auditoría de arquitectura» más abajo) — un backup sin restauración probada no es un backup en el que puedas confiar. Si no tienes un script así, no hay ninguna copia de seguridad automática de nada; tienes que montarla tú aparte.
 - **El OCR sobrescribe el PDF original en su ubicación real** (`indexar_pdfs.py`, función `ocr_en_sitio`), no solo la copia de seguridad. Si esa carpeta está sincronizada con OneDrive — como las dos que se indexan por defecto —, el cambio dispara una re-subida a la nube y una entrada nueva en su historial de versiones. No hay forma de evitarlo sin dejar de tocar el original.
 - **El backup previo al OCR se nombra por ruta de origen, no solo por nombre de archivo** (`backup_pdfs/nombre_HASH.pdf`) — así, dos PDFs con el mismo nombre en carpetas distintas (p. ej. `factura.pdf` en OneDrive y en Documentos) no se pisan la copia de seguridad entre sí.
 - **Todo el stack asume español**: el OCR de Paperless está fijado a `spa`, y los prompts están escritos en español. Usarlo en otro idioma implica tocar configuración y prompts.
@@ -388,7 +388,7 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 
 **Pendiente, en este orden:**
 
-1. **Probar la restauración del backup** contra el Orange Pi. Nunca se ha probado — un backup sin restauración probada no es un backup en el que puedas confiar.
+1. **Probar la restauración del backup** contra el Orange Pi — de Paperless, ChromaDB, fotos y vídeos. Nunca se ha probado ninguno de los cuatro.
 2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
 3. **Revisar la API key de Immich**: comprobar que es una clave dedicada de mínimo privilegio para `ImmichMCP`, no una clave de administrador reutilizada.
 
