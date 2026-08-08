@@ -392,6 +392,15 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
 3. **Revisar la API key de Immich**: comprobar que es una clave dedicada de mínimo privilegio para `ImmichMCP`, no una clave de administrador reutilizada.
 
+**Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:
+
+1. `docker pull <imagen>:<tag>` con el tag original (por ejemplo `docker pull docker.io/apache/tika:latest`).
+2. `docker inspect --format "{{index .RepoDigests 0}}" <imagen>:<tag>` para averiguar el digest nuevo.
+3. Sustituye el digest en el `image:` del `docker-compose.yml` correspondiente por el que ha devuelto el paso anterior — cada servicio en `docker/` tiene estos dos comandos ya escritos en un comentario justo encima de su línea `image:`.
+4. `docker compose up -d --force-recreate <servicio>` para recrearlo con la imagen nueva.
+
+Verifica que el servicio sigue respondiendo antes de dar la actualización por buena. Por ejemplo, para Tika desde dentro del contenedor de Paperless: `curl http://tika:9998/tika` debe dar `200`.
+
 ## 10. Guía de uso diaria
 
 ### Chuleta: qué modelo y qué herramienta
@@ -524,6 +533,30 @@ ejecutados por el autor vía Docker (`gitleaks`: 2 commits, ~125 KB, sin
 hallazgos; TruffleHog, modo filesystem `--results=verified,unknown`: 144
 chunks, 390 KB, 0 secretos). Esto es revisión asistida por IA y herramientas
 automáticas, no una auditoría de seguridad profesional.
+
+### Auditoría cruzada: qué encontró cada herramienta
+
+Este repositorio fue revisado por cinco herramientas distintas antes de publicarse. El resultado más útil no fue ninguna auditoría por separado, sino el patrón que dibujan juntas: **cada una miró una capa diferente y ninguna vio la del resto.**
+
+| Herramienta | Capa revisada | Hallazgos propios |
+|---|---|---|
+| Gitleaks / TruffleHog | Secretos en el historial | Ninguno (limpio) |
+| Grok | Higiene de publicación | OCR modifica el original; puertos expuestos en LAN |
+| Kimi 3 | Código | XSS en los HTML generados; `abrir_pdf` sin validar ruta; escritura no atómica en OCR |
+| Gemini | Configuración de red | Plan de binding a `127.0.0.1` |
+| ChatGPT | Arquitectura y rutas de ataque | `/rl highest` innecesario; `npx -y` sin versión; imágenes `:latest` |
+
+#### La lección
+
+Los escáneres de secretos salieron limpios, y eso llevó a asumir que el repositorio estaba en buen estado. No lo estaba: seguía habiendo ocho tareas programadas con privilegios elevados sin necesitarlos, un paquete npm que se descargaba sin versión fijada en cada arranque, y varias imágenes Docker apuntando a `:latest`.
+
+Ninguno de esos tres problemas es detectable por un escáner de secretos. Ninguno aparece leyendo el código archivo por archivo. Solo se ven preguntando *"si esta pieza se rompe, ¿hasta dónde llega el daño?"*.
+
+**Un repositorio sin secretos filtrados no es un repositorio seguro.** Son dos preguntas distintas y hacen falta dos revisiones distintas.
+
+#### Nota sobre la fiabilidad de estas revisiones
+
+Dos de las auditorías analizaron versiones desactualizadas del repositorio y señalaron como problemas cosas ya corregidas — por ejemplo, un puerto que llevaba horas atado a `127.0.0.1`. Conviene verificar cada hallazgo contra el código actual antes de actuar sobre él; así se hizo con todos los de esta tabla, uno a uno, antes de aplicarlos (ver sección 9, «Auditoría de arquitectura»).
 
 ### Licencia
 
