@@ -6,6 +6,8 @@ Un montaje doméstico de gestión documental y de fotos, autoalojado y con IA lo
 
 ### ¿Es esto para ti?
 
+Tengo 64 años y no soy programador. Si yo he podido montarlo, probablemente tú también.
+
 No soy programador ni administrador de sistemas. Sé moverme por Windows, sigo
 instrucciones de terminal sin miedo, leo lo que devuelve un comando y pregunto cuando
 no entiendo algo. No sé escribir estos scripts desde cero y no habría sabido
