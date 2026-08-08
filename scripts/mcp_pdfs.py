@@ -4,16 +4,19 @@ Se sirve via mcpo para Open WebUI.
 """
 
 import json
+import os
 import urllib.request
 from pathlib import Path
 
 import chromadb
+import requests
 from mcp.server.fastmcp import FastMCP
 
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 CARPETA_DB = str(BASE / "chroma")
 OLLAMA = "http://localhost:11434/api/embeddings"
 MODELO = "bge-m3"
+PAPERLESS_API = "http://localhost:8010/api"
 
 # Las mismas carpetas que indexa indexar_pdfs.py. abrir_pdf solo puede abrir
 # archivos dentro de ellas, nunca una ruta arbitraria del sistema.
@@ -89,7 +92,6 @@ def abrir_pdf(ruta: str) -> str:
     Args:
         ruta: ruta completa del archivo, tal como aparece en los resultados.
     """
-    import os
     ruta_path = Path(ruta).resolve()
     if not any(ruta_path.is_relative_to(c) for c in CARPETAS_PDFS):
         return (f"Ruta no permitida: {ruta}. abrir_pdf solo puede abrir archivos "
@@ -100,5 +102,85 @@ def abrir_pdf(ruta: str) -> str:
         return "Solo se pueden abrir archivos PDF."
     os.startfile(str(ruta_path))
     return f"Abierto en el visor de Windows: {ruta_path.name}"
+
+
+def _cabecera():
+    token = os.environ.get("PAPERLESS_TOKEN")
+    if not token:
+        return None
+    return {"Authorization": f"Token {token}"}
+
+
+def _contar(cab, filtros):
+    """Cuenta documentos con un filtro dado usando page_size=1: solo lee el
+    campo "count" de la respuesta, nunca descarga la lista de documentos."""
+    params = dict(filtros)
+    params["page_size"] = 1
+    r = requests.get(f"{PAPERLESS_API}/documents/", headers=cab, params=params, timeout=30)
+    r.raise_for_status()
+    return r.json()["count"]
+
+
+def _listar_nombres(cab, recurso):
+    """Id -> nombre de un catálogo pequeño (tipos o interlocutores), paginando
+    si hiciera falta. Son listas cortas, a diferencia de los documentos."""
+    nombres, url = {}, f"{PAPERLESS_API}/{recurso}/?page_size=200"
+    while url:
+        r = requests.get(url, headers=cab, timeout=30)
+        r.raise_for_status()
+        datos = r.json()
+        for item in datos["results"]:
+            nombres[item["id"]] = item["name"]
+        url = datos["next"]
+    return nombres
+
+
+@mcp.tool()
+def contar_documentos() -> dict:
+    """Cuenta los documentos archivados en Paperless: total, desglose por tipo
+    de documento y por interlocutor. No descarga ni lee el contenido de
+    ningún documento, solo números ya calculados por la API (campo "count"
+    con page_size=1 en cada consulta) — así el modelo no tiene que razonar
+    sobre un JSON grande para contar, que es donde suele equivocarse.
+
+    Usa esta herramienta para preguntas tipo "¿cuántos documentos/facturas
+    tengo archivados?", "¿cuántos son de tal proveedor?" o "¿cuántos son de
+    tal tipo?". Para el contenido de un documento concreto sigue usando las
+    herramientas de Paperless normales, no esta.
+    """
+    cab = _cabecera()
+    if cab is None:
+        return {"error": "Falta la variable de entorno PAPERLESS_TOKEN."}
+
+    try:
+        total = _contar(cab, {})
+
+        por_tipo = {}
+        for id_tipo, nombre in _listar_nombres(cab, "document_types").items():
+            n = _contar(cab, {"document_type__id": id_tipo})
+            if n:
+                por_tipo[nombre] = n
+        sin_tipo = _contar(cab, {"document_type__isnull": "true"})
+        if sin_tipo:
+            por_tipo["sin_tipo"] = sin_tipo
+
+        por_correspondiente = {}
+        for id_corr, nombre in _listar_nombres(cab, "correspondents").items():
+            n = _contar(cab, {"correspondent__id": id_corr})
+            if n:
+                por_correspondiente[nombre] = n
+        sin_correspondiente = _contar(cab, {"correspondent__isnull": "true"})
+        if sin_correspondiente:
+            por_correspondiente["sin_correspondiente"] = sin_correspondiente
+
+        return {
+            "total": total,
+            "por_tipo": por_tipo,
+            "por_correspondiente": por_correspondiente,
+        }
+    except requests.RequestException as e:
+        return {"error": f"No se pudo consultar Paperless: {e}"}
+
+
 if __name__ == "__main__":
     mcp.run()
