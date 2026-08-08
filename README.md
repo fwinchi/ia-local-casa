@@ -169,6 +169,16 @@ ollama create vl3-paperless -f ollama/vl3-paperless.Modelfile
 
 A partir de aquí, Open WebUI y los scripts ya pueden usar `gptoss-paperless` y `vl3-paperless` por su nombre.
 
+**Antes de borrar modelos para liberar espacio**, estos nunca deben tocarse porque son la base de un modelo personalizado o los usan los indexadores directamente:
+
+- `gpt-oss:20b` — base de `gptoss-paperless`.
+- `qwen3-vl:8b` — base de `vl3-paperless`.
+- `qwen2.5-coder:14b` — base de `qwen2.5-coder:14b-32k`.
+- `bge-m3` — embeddings de `indexar_pdfs.py`/`mcp_pdfs.py`.
+- `nomic-embed-text` — embeddings de `indexar_fotos.py`/`indexar_videos.py`/`mcp_fotos.py`.
+
+**`ollama list` puede dar tamaños engañosos.** Dos nombres distintos pueden compartir exactamente el mismo blob en disco si son el mismo modelo sin cambios — el ID es el que lo delata, no el nombre. Por ejemplo, en una instalación real `gptoss-paperless` y otro modelo sin relación (`web-search`) compartían ID (`1efcb56daf08`, 13 GB): son el mismo fichero en disco con dos nombres, borrar uno con `ollama rm` no libera esos 13 GB si el otro nombre lo sigue referenciando. Antes de borrar algo para liberar espacio, comprueba con `ollama list` si su ID se repite en otro nombre que quieras conservar.
+
 ### 4.7 ChromaDB
 
 No necesita instalación ni contenedor propio: es la librería `chromadb` de Python, que cada script abre directamente sobre la carpeta `chroma\` (ver 4.0). Se crea sola la primera vez que ejecutas un script de indexado.
@@ -312,6 +322,26 @@ Verificadas las 8 funcionando igual con `Limited`.
   MCP anterior, ya inválida. Hubo que reiniciar también ese `mcpo`. Norma: al tocar
   cualquier servicio detrás de un puente `mcpo`, reinicia el puente también, no solo
   el servicio.
+- **`Get-Process node | Stop-Process` mata los cuatro `mcpo` a la vez, no solo el que
+  buscas** — los cuatro corren como procesos `node`/`python` indistinguibles por
+  nombre. Para reiniciar uno solo: localizar su PID exacto con
+  `Get-NetTCPConnection -LocalPort <puerto> -State Listen` y matar solo ese con
+  `taskkill /F /PID <pid>`.
+- **El selector de herramientas de Open WebUI muestra el nombre que declara el propio
+  servidor MCP** (`FastMCP("...")` en Python, o el título de la especificación
+  OpenAPI), no el nombre que le pongas a la conexión en Ajustes de Open WebUI. Ha
+  confundido dos veces — con ImmichMCP y con `mcp_pdfs.py` (antes `"pdfs-onedrive"`,
+  ahora `"Documentos"`).
+- **`gpt-oss:20b` vuelca el JSON crudo en vez de sintetizar cuando una herramienta
+  devuelve un array grande.** Con ~26 documentos completos (metadatos, custom fields,
+  versiones...), en vez de responder el modelo se pone a reformatear los datos a un
+  esquema propio y termina sin contestar. Se descartó uno a uno: hilo de chat, memoria
+  de Open WebUI, system prompt del modelo y `SYSTEM` del Modelfile — no es un problema
+  de configuración, es el modelo con `temperature 0.1` encajando la forma del dato en
+  un patrón de su entrenamiento. La solución no es ajustar el prompt: es dar
+  herramientas deterministas que devuelvan valores ya calculados en vez de listas que
+  el modelo tenga que procesar (`contar_documentos` en `mcp_pdfs.py` es el primer
+  ejemplo).
 - **Modelos locales y mundo exterior**: `gpt-oss:20b` inventa y defiende lo inventado.
   Ningún prompt de anclaje lo arregla. Local para documentos propios, nube para el
   resto.
@@ -342,6 +372,25 @@ Verificadas las 8 funcionando igual con `Limited`.
 - No reutilices los valores de ejemplo de este README ni de los `.env.example`: genera los tuyos propios en cada instalación.
 - Seis servicios están restringidos a `127.0.0.1` y no son alcanzables desde ningún otro dispositivo de tu red: los cuatro `mcpo` (8001, 8002, 8003, 8004), LiteLLM (4000) e ImmichMCP (5000). Paperless (8010) e Immich (2283) se dejan deliberadamente accesibles en tu red local — sin eso no podrías usarlos desde el móvil — y no llevan más autenticación que la propia de cada aplicación. No los expongas a internet sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) puede alcanzarlos igual que tu móvil.
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
+
+### Auditoría de arquitectura
+
+Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Grok, Claude Code, `gitleaks`, TruffleHog), este repo pasó por una auditoría distinta: no buscaba secretos en el código, sino rutas de ataque en la arquitectura (Wi-Fi comprometida, documento malicioso, API key robada, malware ya ejecutándose en Windows...). De ahí salieron estos puntos.
+
+**Aplicado:**
+
+- **Privilegios mínimos en las tareas programadas** — ver sección 7. Las 8 tareas corrían con `HighestAvailable` sin necesitarlo; corregidas a `Limited` y verificadas funcionando.
+- **Versión fijada del paquete MCP de Paperless** — `start-mcpo.bat` usaba `npx -y @baruchiro/paperless-mcp` sin versión, descargando lo que hubiera publicado en npm en cada arranque. Fijado a `@2.0.1`.
+- **`contar_documentos` como primer ejemplo de herramienta determinista** — ver sección 8. Principio general: contar, sumar, filtrar y cruzar datos es trabajo del código, no del modelo; el LLM interpreta la pregunta y redacta la respuesta, no hace la aritmética.
+- **Rutas validadas en `limpiar.py`** — `duplicados_confirmados.json` no puede hacer que se mueva nada fuera de las carpetas de fotos/vídeos del disco externo, aunque lo genere el propio sistema (ver sección 5).
+- **AIssist (8011) restringido a `127.0.0.1`** — quedaba publicado en la LAN sin que nadie lo hubiera revisado.
+- **Imágenes Docker fijadas a un digest** en vez de tags flotantes: Paperless-ngx, Tika, ImmichMCP y LiteLLM ya no usan `:latest`/`:main-latest`. Motivo concreto, no solo teórico: LiteLLM tuvo versiones maliciosas publicadas en PyPI en marzo de 2026. Immich sigue en `:release` (tag propia del proyecto, no `:latest`), pendiente de revisar aparte.
+
+**Pendiente, en este orden:**
+
+1. **Probar la restauración del backup** contra el Orange Pi. Nunca se ha probado — un backup sin restauración probada no es un backup en el que puedas confiar.
+2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
+3. **Revisar la API key de Immich**: comprobar que es una clave dedicada de mínimo privilegio para `ImmichMCP`, no una clave de administrador reutilizada.
 
 ## 10. Guía de uso diaria
 
