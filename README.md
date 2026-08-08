@@ -275,7 +275,16 @@ Creadas con `schtasks` desde PowerShell como Administrador:
 | `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | Al iniciar sesión |
 | `mcp-immich` | `oculto.vbs` + `start-mcp-immich.bat` | Al iniciar sesión |
 
-Todas se crean con las mismas banderas: `/ru <usuario> /rl highest /f` — se ejecutan como el usuario indicado, con privilegios máximos, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
+Se crean con `schtasks ... /ru <usuario> /rl limited /f` — se ejecutan como el usuario indicado, con privilegios normales, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
+
+**No uses `/rl highest`.** Las 8 tareas se crearon originalmente así, sin necesitarlo — ninguna de ellas requiere privilegios elevados para leer/mover archivos o llamar a APIs locales, y correr con más privilegio del necesario amplía el daño posible si algo se compromete. Se corrigieron a `Limited` sin recrearlas desde cero:
+
+```powershell
+$principal = New-ScheduledTaskPrincipal -UserId <usuario> -LogonType Interactive -RunLevel Limited
+Set-ScheduledTask -TaskName <tarea> -Principal $principal
+```
+
+Verificadas las 8 funcionando igual con `Limited`.
 
 ## 8. Lo que aprendí a base de fallar
 
