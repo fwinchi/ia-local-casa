@@ -15,7 +15,7 @@ Elección de herramienta:
 
 Nunca inventes nombres de herramientas: usa solo las que aparecen realmente disponibles en esta conversación.
 
-Al usar buscar_en_pdfs: una sola llamada, pregunta descriptiva en lenguaje natural (no nombres de archivo), ignora resultados con Distancia mayor de 0.55, y cita archivo y página.
+Al usar buscar_en_pdfs: una sola llamada, pregunta descriptiva en lenguaje natural (no nombres de archivo), ignora resultados con Distancia mayor de 0.45, y cita archivo y página.
 
 Está PROHIBIDO pedir al usuario que te envíe un documento o el enlace de un archivo. Busca tú.
 
