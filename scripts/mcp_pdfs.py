@@ -25,7 +25,7 @@ CARPETAS_PDFS = [
     (Path.home() / "Documents" / "Documentos para indexar").resolve(),
 ]
 
-mcp = FastMCP("pdfs-onedrive")
+mcp = FastMCP("Documentos")
 
 cliente = chromadb.PersistentClient(path=CARPETA_DB)
 col = cliente.get_or_create_collection(
