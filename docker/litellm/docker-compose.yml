@@ -1,8 +1,9 @@
 services:
   litellm:
-    # Fijado al digest en uso el 2026-08-07 (era :main-latest). Para
-    # actualizar: docker pull ghcr.io/berriai/litellm:main-latest && docker
-    # inspect --format '{{index .RepoDigests 0}}' ghcr.io/berriai/litellm:main-latest
+    # Fijado al digest en uso el 2026-08-07 (era :main-latest). Para actualizar:
+    #   docker pull ghcr.io/berriai/litellm:main-latest
+    #   docker inspect --format "{{index .RepoDigests 0}}" ghcr.io/berriai/litellm:main-latest
+    # y sustituye el digest de abajo por el que devuelva ese comando.
     image: ghcr.io/berriai/litellm@sha256:a049fb12c8737ada1a7d8c1185fa589c226d7846c1f45192fdbb6c03e8f83ba5
     container_name: litellm
     restart: unless-stopped

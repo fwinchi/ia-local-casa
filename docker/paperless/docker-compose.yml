@@ -24,14 +24,17 @@ services:
 
   tika:
     # Fijado al digest en uso el 2026-08-07 (era :latest). Para actualizar:
-    # docker pull docker.io/apache/tika:latest && docker inspect --format
-    # '{{index .RepoDigests 0}}' docker.io/apache/tika:latest
+    #   docker pull docker.io/apache/tika:latest
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/apache/tika:latest
+    # y sustituye el digest de abajo por el que devuelva ese comando.
     image: docker.io/apache/tika@sha256:90b7fa1dc018434075fce9e1d9b88b1e3d0ea6979d0cf86e116c79a8073ae973
     restart: unless-stopped
 
   webserver:
-    # Fijado al digest en uso el 2026-08-07 (era :latest). Mismo procedimiento
-    # que tika para actualizar, con docker.io/paperlessngx/paperless-ngx.
+    # Fijado al digest en uso el 2026-08-07 (era :latest). Para actualizar:
+    #   docker pull docker.io/paperlessngx/paperless-ngx:latest
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/paperlessngx/paperless-ngx:latest
+    # y sustituye el digest de abajo por el que devuelva ese comando.
     image: docker.io/paperlessngx/paperless-ngx@sha256:17312f00bac06f8dad09d67c6c8c069fc5c076c0c22313241c673102dfaf8ee9
     restart: unless-stopped
     depends_on:
