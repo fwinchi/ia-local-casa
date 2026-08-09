@@ -6,7 +6,7 @@ REM IP o nombre de host del destino en tu red local (aqui un Orange Pi, pero val
 set IP=192.168.1.XXX
 REM Usuario SSH con permiso de escritura en el destino.
 set USUARIO=TU_USUARIO
-REM Ruta base en el destino donde se guardaran los cinco subdirectorios (paperless, chroma, fotos, videos, documentos).
+REM Ruta base en el destino donde se guardaran los seis subdirectorios (paperless, chroma, fotos, videos, documentos, immich-db).
 set DESTINO_BASE=/home/TU_USUARIO/backup-nasa
 REM Usuario de Windows dueno de la carpeta "Documents\Documentos para indexar"
 REM (para construir su ruta /mnt/c/Users/... vista desde WSL). Es tu cuenta
@@ -79,7 +79,34 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 7. Marcar como hecho hoy - solo si los seis pasos anteriores salieron bien
+REM 7. Base de datos de Immich: pg_dump dentro de su propio contenedor
+REM    Postgres (immich_postgres), igual que el export de Paperless usa
+REM    su propio contenedor. -Fc (formato personalizado) en vez de SQL
+REM    plano: se restaura con pg_restore, no con psql. Las extensiones de
+REM    vectores (vchord, vector/pgvector) no necesitan nada especial: se
+REM    ha comprobado con pg_restore -l que el volcado registra sus
+REM    CREATE EXTENSION como cualquier otra. La contrasena no hace falta
+REM    aqui: docker exec entra como root dentro del contenedor, que
+REM    autentica en local por socket sin pedirla.
+docker exec immich_postgres pg_dump -U postgres -d immich -Fc -f /tmp/immich-db.dump
+if errorlevel 1 (
+    echo ERROR: fallo el pg_dump de Immich
+    exit /b 1
+)
+docker cp immich_postgres:/tmp/immich-db.dump "%TEMP%\immich-db.dump"
+if errorlevel 1 (
+    echo ERROR: fallo el docker cp del dump de Immich
+    exit /b 1
+)
+REM Limpieza dentro del contenedor: no crítica, no bloquea el backup si falla.
+docker exec immich_postgres rm -f /tmp/immich-db.dump
+scp -q "%TEMP%\immich-db.dump" %USUARIO%@%IP%:%DESTINO_BASE%/immich-db/
+if errorlevel 1 (
+    echo ERROR: fallo el scp del dump de Immich
+    exit /b 1
+)
+
+REM 8. Marcar como hecho hoy - solo si los siete pasos anteriores salieron bien
 >"%MARCA%" echo %HOY%
 echo [%date% %time%] Backup completado
 
