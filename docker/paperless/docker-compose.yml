@@ -1,12 +1,20 @@
 services:
   broker:
-    image: docker.io/library/redis:7
+    # Fijado al digest en uso el 2026-08-09 (era :7). Para actualizar:
+    #   docker pull docker.io/library/redis:7
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/library/redis:7
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: docker.io/library/redis@sha256:595cc6f2bb3af6e03347b90deb6123c6aa2c81dea05ce08128de8a174b6ac67b
     restart: unless-stopped
     volumes:
       - redisdata:/data
 
   db:
-    image: docker.io/library/postgres:16
+    # Fijado al digest en uso el 2026-08-09 (era :16). Para actualizar:
+    #   docker pull docker.io/library/postgres:16
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/library/postgres:16
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: docker.io/library/postgres@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
     restart: unless-stopped
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -16,7 +24,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
   gotenberg:
-    image: docker.io/gotenberg/gotenberg:8
+    # Fijado al digest en uso el 2026-08-09 (era :8). Para actualizar:
+    #   docker pull docker.io/gotenberg/gotenberg:8
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/gotenberg/gotenberg:8
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: docker.io/gotenberg/gotenberg@sha256:67097317623a503ba2a6a7e9ae8db6929a1f7e1bbd88077bacf2d325fbdab923
     restart: unless-stopped
     command:
       - "gotenberg"
@@ -66,7 +78,11 @@ services:
 
 
   paperless-aissist:
-    image: nyxtronlab/paperless-aissist
+    # Fijado al digest en uso el 2026-08-09 (era :latest). Para actualizar:
+    #   docker pull nyxtronlab/paperless-aissist:latest
+    #   docker inspect --format "{{index .RepoDigests 0}}" nyxtronlab/paperless-aissist:latest
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: nyxtronlab/paperless-aissist@sha256:2436e4ca8f2dcfe51aa78315d42670efd7a5459977fc77f4acac3de6e6253bf4
     restart: unless-stopped
     ports:
       - "127.0.0.1:8011:8080"
