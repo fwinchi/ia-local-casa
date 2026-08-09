@@ -1,7 +1,7 @@
-﻿"""
-Indexa los PDFs de una carpeta en ChromaDB (local, en fichero).
-Los embeddings los genera Ollama con nomic-embed-text.
-Ejecutar cada vez que anadas PDFs nuevos: solo procesa los que faltan.
+"""
+Indexa documentos (PDF, DOCX, TXT, ODT) de una carpeta en ChromaDB (local, en fichero).
+Los embeddings los genera Ollama con bge-m3.
+Ejecutar cada vez que anadas documentos nuevos: solo procesa los que faltan.
 """
 
 import hashlib
@@ -10,6 +10,10 @@ import urllib.request
 from pathlib import Path
 
 import chromadb
+import docx
+from odf import teletype
+from odf.opendocument import load as cargar_odt
+from odf.text import P as OdtParrafo
 from pypdf import PdfReader
 
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
@@ -24,6 +28,8 @@ MODELO = "bge-m3"
 
 TAM_TROZO = 1200      # caracteres por fragmento
 SOLAPE = 200          # solape entre fragmentos
+
+EXTENSIONES = [".pdf", ".docx", ".txt", ".odt"]
 
 
 def embedding(texto):
@@ -56,6 +62,53 @@ def texto_de_pdf(ruta):
     except Exception as e:
         print(f"  ERROR leyendo: {e}")
         return []
+
+
+def texto_de_docx(ruta):
+    """DOCX no tiene un concepto fiable de "pagina" sin renderizarlo, asi que
+    se trata como un unico bloque (pagina 1) y se trocea igual que un PDF."""
+    try:
+        documento = docx.Document(str(ruta))
+        texto = "\n".join(p.text for p in documento.paragraphs)
+        return [(1, texto)] if texto.strip() else []
+    except Exception as e:
+        print(f"  ERROR leyendo: {e}")
+        return []
+
+
+def texto_de_txt(ruta):
+    """Mismo criterio que DOCX/ODT: un unico bloque, pagina 1."""
+    try:
+        try:
+            texto = ruta.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            texto = ruta.read_text(encoding="cp1252", errors="replace")
+        return [(1, texto)] if texto.strip() else []
+    except Exception as e:
+        print(f"  ERROR leyendo: {e}")
+        return []
+
+
+def texto_de_odt(ruta):
+    """Mismo criterio que DOCX/TXT: un unico bloque, pagina 1."""
+    try:
+        documento = cargar_odt(str(ruta))
+        parrafos = documento.getElementsByType(OdtParrafo)
+        texto = "\n".join(teletype.extractText(p) for p in parrafos)
+        return [(1, texto)] if texto.strip() else []
+    except Exception as e:
+        print(f"  ERROR leyendo: {e}")
+        return []
+
+
+EXTRACTORES = {
+    ".pdf": texto_de_pdf,
+    ".docx": texto_de_docx,
+    ".txt": texto_de_txt,
+    ".odt": texto_de_odt,
+}
+
+
 def ocr_en_sitio(ruta):
     """Aplica OCR al PDF original. Hace copia previa. Devuelve True si lo procesó."""
     import shutil, subprocess
@@ -99,32 +152,40 @@ def ocr_en_sitio(ruta):
         print(f"  Error en OCR: {e}")
         return False
 
+
 def main():
     cliente = chromadb.PersistentClient(path=CARPETA_DB)
     col = cliente.get_or_create_collection(
         "documentos", metadata={"hnsw:space": "cosine"}
     )
 
-    pdfs = []
+    archivos = []
     for carpeta in CARPETAS_PDFS:
         if carpeta.exists():
-            pdfs.extend(carpeta.rglob("*.pdf"))
+            for ext in EXTENSIONES:
+                archivos.extend(carpeta.rglob(f"*{ext}"))
         else:
             print(f"AVISO: no existe {carpeta}")
-    pdfs = sorted(pdfs)
-    print(f"Encontrados {len(pdfs)} PDFs\n")
+    archivos = sorted(archivos)
+    print(f"Encontrados {len(archivos)} documentos ({', '.join(EXTENSIONES)})\n")
 
     nuevos = 0
-    for ruta in pdfs:
+    for ruta in archivos:
         id_doc = hashlib.md5(str(ruta).encode()).hexdigest()[:12]
 
         # Saltar si ya esta indexado
         if col.get(where={"doc": id_doc}, limit=1)["ids"]:
             continue
 
+        tipo = ruta.suffix.lower().lstrip(".")
         print(f"Indexando: {ruta.name}")
-        paginas = texto_de_pdf(ruta)
-        if not paginas:
+
+        extractor = EXTRACTORES[ruta.suffix.lower()]
+        paginas = extractor(ruta)
+
+        if not paginas and ruta.suffix.lower() == ".pdf":
+            # Solo el PDF puede ser un escaneo sin texto: DOCX/TXT/ODT
+            # siempre son texto nativo, no tiene sentido pasarles OCR.
             print("  Sin texto extraible. Aplicando OCR...")
             if not ocr_en_sitio(ruta):
                 continue
@@ -133,6 +194,9 @@ def main():
                 print("  Sigue sin texto. Saltado.")
                 continue
             print(f"  OCR aplicado: {len(paginas)} paginas.")
+        elif not paginas:
+            print("  Sin texto extraible. Saltado.")
+            continue
 
         ids, docs, embs, metas = [], [], [], []
         for num_pagina, texto in paginas:
@@ -147,6 +211,7 @@ def main():
                     "archivo": ruta.name,
                     "ruta": str(ruta),
                     "pagina": num_pagina,
+                    "tipo": tipo,
                 })
 
         if ids:
@@ -154,7 +219,7 @@ def main():
             print(f"  {len(ids)} fragmentos anadidos")
             nuevos += 1
 
-    print(f"\nListo. {nuevos} PDFs nuevos indexados.")
+    print(f"\nListo. {nuevos} documentos nuevos indexados.")
     print(f"Total de fragmentos en la base: {col.count()}")
 
 

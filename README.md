@@ -44,8 +44,8 @@ flowchart LR
         A1["Carpeta consume"] --> A2["OCR"] --> A3["AIssist extrae campos"] --> A4["autocorresponsal.py<br>asigna remitente"]
     end
 
-    subgraph C2["Circuito 2 · Índice de PDFs"]
-        B1["Carpetas de PDFs<br>(OneDrive, Documents...)"] --> B2["indexar_pdfs.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
+    subgraph C2["Circuito 2 · Índice de documentos"]
+        B1["Carpetas de documentos<br>(OneDrive, Documents...)<br>PDF / DOCX / TXT / ODT"] --> B2["indexar_pdfs.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
         B3 --> B4["buscar_en_pdfs"]
     end
 
@@ -60,7 +60,7 @@ flowchart LR
 ```
 
 1. **Paperless** — lo que se deja en la carpeta `consume` se OCR-iza, AIssist extrae los campos y `autocorresponsal.py` asigna el remitente.
-2. **Índice de PDFs** — `indexar_pdfs.py` recorre las carpetas configuradas, trocea el texto, lo embebe con `bge-m3` y lo guarda en ChromaDB. Se consulta con `buscar_en_pdfs`.
+2. **Índice de documentos** — `indexar_pdfs.py` recorre las carpetas configuradas, trocea el texto, lo embebe con `bge-m3` y lo guarda en ChromaDB. Soporta PDF, DOCX, TXT y ODT (el nombre del script se quedó del día que solo hacía PDF). Se consulta con `buscar_en_pdfs`.
 3. **Fotos y vídeos** — `indexar_fotos.py` / `indexar_videos.py` describen cada archivo con el modelo de visión y lo indexan. Se consulta con `buscar_fotos` / `buscar_videos`.
 
 Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura — no comparte datos con los otros tres circuitos.
@@ -213,7 +213,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 |---|---|
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
-| `indexar_pdfs.py` | Indexa los PDFs de las carpetas configuradas. Si uno no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta. |
+| `indexar_pdfs.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
 | `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados` y `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas). |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos` y `estadisticas_fotos`; genera una galería HTML con los resultados. |
@@ -433,7 +433,7 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 
 ### 2. Guardar un informe médico, póliza, trámite… para poder preguntarle luego
 
-**Qué hago:** guardo el PDF en `%USERPROFILE%\Documents\Documentos para indexar`.
+**Qué hago:** guardo el archivo (PDF, DOCX, TXT u ODT) en `%USERPROFILE%\Documents\Documentos para indexar`.
 
 **Qué pasa solo:** al arrancar el PC se indexa el contenido.
 
@@ -444,8 +444,8 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 
 **Cómo lo consulto:** Open WebUI, modelo `gptoss-paperless`, herramienta **PDFs OneDrive**. Ej.: *"¿qué dice el informe del traumatólogo?"*
 
-> Solo indexa **PDF**. Si escaneas en JPG, no entra aquí.
-> Si el PDF viene escaneado sin texto, hay que pasarle OCR (ver punto 7).
+> Indexa **PDF, DOCX, TXT y ODT**. Si escaneas en JPG, no entra aquí.
+> Si el PDF viene escaneado sin texto, hay que pasarle OCR (ver punto 7) — DOCX/TXT/ODT nunca lo necesitan, siempre traen texto nativo.
 
 ### 3. Buscar una foto o un vídeo del disco externo
 
