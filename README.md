@@ -101,7 +101,7 @@ Antes de tocar nada: elige una carpeta raíz para tu instalación (en este READM
   data\ media\ export\ consume\   ← las crea sola Paperless al arrancar
 ```
 
-Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_pdfs.py`, `mcp_pdfs.py` y `salud.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
+Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_pdfs.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
 
 ### 4.1 Docker Desktop
 
@@ -228,9 +228,9 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 |---|---|
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
-| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por `indexar_pdfs.py`, `mcp_pdfs.py` y `salud.py` (`CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...), para no mantener copias sueltas de cada una. |
+| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_pdfs.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
 | `indexar_pdfs.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
-| `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados` y `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas). |
+| `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados`, `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos` y `estadisticas_fotos`; genera una galería HTML con los resultados. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
@@ -240,6 +240,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `organizar_fotos.py` | Reordena las fotos del disco externo en carpetas `AAAA\MM-Mes` según la fecha EXIF (o el nombre del archivo como respaldo). Por defecto solo simula; hace falta `--aplicar`. |
 | `organizador.py` | Organiza la carpeta de Descargas por tipo de archivo (Imágenes, PDFs, Documentos, Instaladores...). |
 | `oculto.vbs` | Lanza el `.bat` que se le pase como argumento sin mostrar ventana. |
+| `backup-orangepi.bat` | Copia Paperless, ChromaDB, fotos, vídeos y documentos a indexar a un NAS/Orange Pi por red (`scp`/`rsync` vía WSL). Sin tarea programada propia; ver «Qué no resuelve este montaje» en la sección 9 para el detalle y las limitaciones. |
 | `salud.py` | Comprueba el estado de todo el stack (puertos mcpo, contenedores Docker, Ollama, LiteLLM, tareas programadas, ChromaDB, carpeta `consume`, disco externo, cuarentena de duplicados...) y genera `salud.html` con el resultado. Se ejecuta a mano con `salud.bat`, no tiene tarea programada. |
 
 `salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`). **Es sensible**: enumera tareas programadas, contenedores Docker, versiones de modelos, espacio libre en disco y estado de la carpeta `consume` — un inventario bastante completo de tu instalación. No lo compartas ni lo subas a ningún sitio.
@@ -385,13 +386,6 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **Todo el stack asume español**: el OCR de Paperless está fijado a `spa`, y los prompts están escritos en español. Usarlo en otro idioma implica tocar configuración y prompts.
 - **Es un único PC, sin redundancia.** Si está apagado, no hay indexado, ni Paperless, ni herramientas en Open WebUI.
 
-### Avisos de seguridad
-
-- Los secretos (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en archivos `.env` / `secrets.local.bat` que están en `.gitignore`. Nunca los subas al repositorio, ni siquiera en un commit temporal que luego borres — el historial de git los conservaría.
-- No reutilices los valores de ejemplo de este README ni de los `.env.example`: genera los tuyos propios en cada instalación.
-- Seis servicios están restringidos a `127.0.0.1` y no son alcanzables desde ningún otro dispositivo de tu red: los cuatro `mcpo` (8001, 8002, 8003, 8004), LiteLLM (4000) e ImmichMCP (5000). Paperless (8010) e Immich (2283) se dejan deliberadamente accesibles en tu red local — sin eso no podrías usarlos desde el móvil — y no llevan más autenticación que la propia de cada aplicación. No los expongas a internet sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) puede alcanzarlos igual que tu móvil.
-- Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
-
 ### Modelo de seguridad
 
 Resumen de una página, deducido del código real, no de memoria:
@@ -402,10 +396,11 @@ Resumen de una página, deducido del código real, no de memoria:
 - ImmichMCP: 5000.
 
 **Qué está expuesto a la LAN, y por qué:**
-- Paperless (8010) e Immich (2283). Deliberado: es la única forma de usarlos desde el móvil sin montar una VPN. No llevan más autenticación que la propia de cada aplicación — cualquier otro dispositivo de tu WiFi los alcanza igual que tu móvil.
+- Paperless (8010) e Immich (2283). Deliberado: es la única forma de usarlos desde el móvil sin montar una VPN. No llevan más autenticación que la propia de cada aplicación. **No los expongas a internet** sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) los alcanza igual que tu móvil.
 
 **Dónde viven los secretos:**
-- Tokens, claves de API y contraseñas viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders.
+- Tokens, claves de API y contraseñas (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean, **ni siquiera en un commit temporal que luego borres**: el historial de git los conservaría igual. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders — no reutilices esos valores ni los de este README, genera los tuyos propios en cada instalación.
+- Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
 
 **Qué queda pendiente:**
 - Ollama (11434) escucha en todas las interfaces, sin autenticación — no se ha atado a `127.0.0.1` porque rompería el acceso desde WSL (Aider lo usa así). Falta una regla de firewall que lo restrinja a la subred de WSL en vez de dejarlo abierto a toda la red.
