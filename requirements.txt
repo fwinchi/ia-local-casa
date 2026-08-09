@@ -22,7 +22,7 @@ chromadb==1.5.9
 # HTTP: llamadas a Paperless, Ollama e Immich
 requests==2.32.3
 
-# Documentos (indexar_pdfs.py): PDF, DOCX, ODT
+# Documentos (indexar_documentos.py): PDF, DOCX, ODT
 pypdf==6.14.2
 python-docx==1.2.0
 odfpy==1.4.1

@@ -4,7 +4,7 @@ repo. Un solo sitio para no tener que mantener sincronizadas varias
 copias cada vez que cambia una carpeta, un modelo o los formatos
 soportados. Dos circuitos, cada uno con sus propias constantes:
 
-- Documentos (indexar_pdfs.py, mcp_pdfs.py, buscar.py; también salud.py):
+- Documentos (indexar_documentos.py, mcp_pdfs.py, buscar.py; también salud.py):
   CARPETAS_PDFS, OLLAMA (URL completa del endpoint de embeddings),
   MODELO (bge-m3), EXTENSIONES.
 - Fotos/vídeos (indexar_fotos.py, indexar_videos.py, mcp_fotos.py):
@@ -21,7 +21,7 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 
-# Carpetas indexadas por indexar_pdfs.py y validadas por abrir_pdf en
+# Carpetas indexadas por indexar_documentos.py y validadas por abrir_pdf en
 # mcp_pdfs.py (ninguna ruta fuera de ellas se puede abrir). Ambas con el
 # mismo nombre de subcarpeta a proposito: antes se indexaba
 # OneDrive\Documentos entero y arrastraba basura (configs y logs de
@@ -37,7 +37,7 @@ CARPETA_DB = str(BASE / "chroma")
 OLLAMA = "http://localhost:11434/api/embeddings"
 MODELO = "bge-m3"
 
-# Formatos que indexa indexar_pdfs.py y que abrir_pdf puede abrir.
+# Formatos que indexa indexar_documentos.py y que abrir_pdf puede abrir.
 EXTENSIONES = [".pdf", ".docx", ".txt", ".odt"]
 
 # --- Fotos / vídeos ---

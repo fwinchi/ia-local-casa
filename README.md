@@ -47,7 +47,7 @@ flowchart TB
 
     subgraph C2["Circuito 2 · Índice de documentos"]
         direction LR
-        B1["Carpetas de documentos<br>(OneDrive, Documents...)<br>PDF / DOCX / TXT / ODT"] --> B2["indexar_pdfs.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
+        B1["Carpetas de documentos<br>(OneDrive, Documents...)<br>PDF / DOCX / TXT / ODT"] --> B2["indexar_documentos.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
         B3 --> B4["buscar_en_pdfs"]
     end
 
@@ -66,7 +66,7 @@ flowchart TB
 ```
 
 1. **Paperless** — lo que se deja en la carpeta `consume` se OCR-iza, AIssist extrae los campos y `autocorresponsal.py` asigna el remitente.
-2. **Índice de documentos** — `indexar_pdfs.py` recorre las carpetas configuradas, trocea el texto, lo embebe con `bge-m3` y lo guarda en ChromaDB. Soporta PDF, DOCX, TXT y ODT (el nombre del script se quedó del día que solo hacía PDF). Se consulta con `buscar_en_pdfs`.
+2. **Índice de documentos** — `indexar_documentos.py` recorre las carpetas configuradas, trocea el texto, lo embebe con `bge-m3` y lo guarda en ChromaDB. Soporta PDF, DOCX, TXT y ODT.
 3. **Fotos y vídeos** — `indexar_fotos.py` / `indexar_videos.py` describen cada archivo con el modelo de visión y lo indexan. Se consulta con `buscar_fotos` / `buscar_videos`.
 
 Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura — no comparte datos con los otros tres circuitos.
@@ -107,7 +107,7 @@ Antes de tocar nada: elige una carpeta raíz para tu instalación (en este READM
   data\ media\ export\ consume\   ← las crea sola Paperless al arrancar
 ```
 
-Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_pdfs.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
+Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_documentos.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
 
 ### 4.1 Docker Desktop
 
@@ -119,7 +119,7 @@ Instálalo y déjalo en marcha (con integración WSL2 si vas a usar la GPU para 
 2. Renombra la copia de `.env.example` a `.env` y rellena `POSTGRES_PASSWORD` y `PAPERLESS_SECRET_KEY` con valores propios (nunca reutilices un ejemplo de un README).
 3. Desde `<TU_RAIZ>`: `docker compose up -d`.
 
-**⚠️ Aviso sobre el volumen de Docker:** `indexar_pdfs.py` aplica OCR copiando el PDF a `<TU_RAIZ>\export\ocr_auto` y luego ejecuta `ocrmypdf` **dentro** del contenedor `paperless-webserver-1`, sobre la ruta fija `/usr/src/paperless/export/ocr_auto/` (ver [scripts/indexar_pdfs.py:102-117](scripts/indexar_pdfs.py:102)). Esa ruta interna la define el bind mount `./export:/usr/src/paperless/export` del `docker-compose.yml`. Si sigues la estructura de carpetas de 4.0, coincide sola; si cambias el nombre del contenedor o el mapeo del volumen, tienes que actualizar también esa ruta dentro del script.
+**⚠️ Aviso sobre el volumen de Docker:** `indexar_documentos.py` aplica OCR copiando el PDF a `<TU_RAIZ>\export\ocr_auto` y luego ejecuta `ocrmypdf` **dentro** del contenedor `paperless-webserver-1`, sobre la ruta fija `/usr/src/paperless/export/ocr_auto/` (ver [scripts/indexar_documentos.py:102-117](scripts/indexar_documentos.py:102)). Esa ruta interna la define el bind mount `./export:/usr/src/paperless/export` del `docker-compose.yml`. Si sigues la estructura de carpetas de 4.0, coincide sola; si cambias el nombre del contenedor o el mapeo del volumen, tienes que actualizar también esa ruta dentro del script.
 
 ### 4.3 Immich
 
@@ -184,7 +184,7 @@ A partir de aquí, Open WebUI y los scripts ya pueden usar `gptoss-paperless` y 
 - `gpt-oss:20b` — base de `gptoss-paperless`.
 - `qwen3-vl:8b` — base de `vl3-paperless`.
 - `qwen2.5-coder:14b` — base de `qwen2.5-coder:14b-32k`.
-- `bge-m3` — embeddings de `indexar_pdfs.py`/`mcp_pdfs.py`.
+- `bge-m3` — embeddings de `indexar_documentos.py`/`mcp_pdfs.py`.
 - `nomic-embed-text` — embeddings de `indexar_fotos.py`/`indexar_videos.py`/`mcp_fotos.py`.
 
 **`ollama list` puede dar tamaños engañosos.** Dos nombres distintos pueden compartir exactamente el mismo blob en disco si son el mismo modelo sin cambios — el ID es el que lo delata, no el nombre. Por ejemplo, en una instalación real `gptoss-paperless` y otro modelo sin relación (`web-search`) compartían ID (`1efcb56daf08`, 13 GB): son el mismo fichero en disco con dos nombres, borrar uno con `ollama rm` no libera esos 13 GB si el otro nombre lo sigue referenciando. Antes de borrar algo para liberar espacio, comprueba con `ollama list` si su ID se repite en otro nombre que quieras conservar.
@@ -240,8 +240,8 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 |---|---|
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
-| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_pdfs.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
-| `indexar_pdfs.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
+| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_documentos.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
+| `indexar_documentos.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
 | `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados`, `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos` y `listar_personas` (nombre y nº de fotos de cada persona identificada en Immich — filtra y cuenta en código para no mandarle al modelo el JSON completo de `/api/people`, mismo motivo que `contar_documentos`); genera una galería HTML con los resultados de las búsquedas. |
@@ -392,8 +392,8 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_pdf`.
 - **La detección de duplicados nunca borra nada por sí sola.** `duplicados.py`/`revisar.py` generan un informe; `limpiar.py` solo mueve a cuarentena, y solo tras escribir "SI" explícitamente. Borrar de verdad es un paso manual tuyo, aparte.
 - **Hay un script de backup; la restauración de Paperless ya está probada, el resto todavía no.** [`scripts/backup-orangepi.bat`](scripts/backup-orangepi.bat) copia el volcado de Paperless, ChromaDB, fotos, vídeos, los documentos a indexar, la base de datos de Immich y el volumen Docker de Open WebUI (chats, prompts guardados, configuración) a un Raspberry/Orange Pi por red (`scp`/`rsync`/`pg_dump`/`docker run` vía WSL). ChromaDB se sincroniza como espejo exacto (`--delete`, es un índice reconstruible); fotos, vídeos y documentos se acumulan sin `--delete` a propósito, para no arriesgarse a borrar la copia buena si el disco externo falla o se desmonta mal. Del volumen de Open WebUI se excluye `./cache` a propósito: son modelos de embeddings regenerables, ~1 GB — sin excluirlos el volcado pesa 21 MB en vez de más de 1 GB. La restauración de Paperless se probó con éxito contra un contenedor aislado (procedimiento y resultado más abajo, «Restauración probada: Paperless»); ChromaDB, fotos, vídeos, documentos, la base de datos de Immich y el volumen de Open WebUI siguen sin probarse (ver «Auditoría de arquitectura» más abajo). Si no adaptas y programas este script (o el tuyo propio), no hay ninguna copia de seguridad automática de nada.
-- **Solo se respalda una de las dos carpetas de documentos, a propósito.** `indexar_pdfs.py` lee de dos sitios (sección 9, «Reglas que ya me han costado tiempo»): `OneDrive\Documentos\Documentos para indexar` y `Documents\Documentos para indexar`. El backup a Orange Pi solo copia la segunda. La de OneDrive no lo necesita: OneDrive ya la sincroniza a la nube de Microsoft por su cuenta, así que respaldarla también al Orange Pi sería una copia redundante de algo que ya está a salvo en otro sitio. La de `Documents` es puramente local — si no la respaldas tú, no hay ninguna otra copia en ningún sitio.
-- **El OCR sobrescribe el PDF original en su ubicación real** (`indexar_pdfs.py`, función `ocr_en_sitio`), no solo la copia de seguridad. Si esa carpeta está sincronizada con OneDrive — como las dos que se indexan por defecto —, el cambio dispara una re-subida a la nube y una entrada nueva en su historial de versiones. No hay forma de evitarlo sin dejar de tocar el original.
+- **Solo se respalda una de las dos carpetas de documentos, a propósito.** `indexar_documentos.py` lee de dos sitios (sección 9, «Reglas que ya me han costado tiempo»): `OneDrive\Documentos\Documentos para indexar` y `Documents\Documentos para indexar`. El backup a Orange Pi solo copia la segunda. La de OneDrive no lo necesita: OneDrive ya la sincroniza a la nube de Microsoft por su cuenta, así que respaldarla también al Orange Pi sería una copia redundante de algo que ya está a salvo en otro sitio. La de `Documents` es puramente local — si no la respaldas tú, no hay ninguna otra copia en ningún sitio.
+- **El OCR sobrescribe el PDF original en su ubicación real** (`indexar_documentos.py`, función `ocr_en_sitio`), no solo la copia de seguridad. Si esa carpeta está sincronizada con OneDrive — como las dos que se indexan por defecto —, el cambio dispara una re-subida a la nube y una entrada nueva en su historial de versiones. No hay forma de evitarlo sin dejar de tocar el original.
 - **El backup previo al OCR se nombra por ruta de origen, no solo por nombre de archivo** (`backup_pdfs/nombre_HASH.pdf`) — así, dos PDFs con el mismo nombre en carpetas distintas (p. ej. `factura.pdf` en OneDrive y en Documentos) no se pisan la copia de seguridad entre sí.
 - **Todo el stack asume español**: el OCR de Paperless está fijado a `spa`, y los prompts están escritos en español. Usarlo en otro idioma implica tocar configuración y prompts.
 - **Es un único PC, sin redundancia.** Si está apagado, no hay indexado, ni Paperless, ni herramientas en Open WebUI.
@@ -503,7 +503,7 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 
 **Si tengo prisa, lo fuerzo:**
 ```
-%USERPROFILE%\AppData\Local\Python\bin\python.exe <TU_RAIZ>\scripts\indexar_pdfs.py
+%USERPROFILE%\AppData\Local\Python\bin\python.exe <TU_RAIZ>\scripts\indexar_documentos.py
 ```
 
 **Cómo lo consulto:** Open WebUI, modelo `gptoss-paperless`, herramienta **PDFs OneDrive**. Ej.: *"¿qué dice el informe del traumatólogo?"*
