@@ -404,12 +404,16 @@ Resumen de una página, deducido del código real, no de memoria:
 **Qué está expuesto a la LAN, y por qué:**
 - Paperless (8010) e Immich (2283). Deliberado: es la única forma de usarlos desde el móvil sin montar una VPN. No llevan más autenticación que la propia de cada aplicación. **No los expongas a internet** sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) los alcanza igual que tu móvil.
 
+**Ollama (11434), acotado por firewall en vez de abierto a toda la red:**
+- No está atado a `127.0.0.1` porque WSL necesita alcanzarlo (Aider lo usa así) y el móvil habla con él directamente desde la app Maid. En vez de dejarlo abierto a toda la LAN, una regla de firewall de Windows ("Ollama 11434") lo restringe a la subred de WSL (`172.19.240.0/20`) y a la IP del móvil (ejemplo: `192.168.1.50` — sustituye por la tuya real).
+- **Aviso 1:** la subred de WSL puede cambiar al reiniciar Windows. Verifica con `ip route | grep default` dentro de WSL y actualiza la regla de firewall si ha cambiado.
+- **Aviso 2:** si el móvil tiene una VPN activa, la IP de origen cambia y la regla bloquea la conexión — desactiva la VPN para hablar con Ollama, o añade la IP que te asigne la VPN a la regla.
+
 **Dónde viven los secretos:**
 - Tokens, claves de API y contraseñas (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean, **ni siquiera en un commit temporal que luego borres**: el historial de git los conservaría igual. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders — no reutilices esos valores ni los de este README, genera los tuyos propios en cada instalación.
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
 
 **Qué queda pendiente:**
-- Ollama (11434) escucha en todas las interfaces, sin autenticación — no se ha atado a `127.0.0.1` porque rompería el acceso desde WSL (Aider lo usa así). Falta una regla de firewall que lo restrinja a la subred de WSL en vez de dejarlo abierto a toda la red.
 - Rotar la API key de Immich y la de Google AI Studio (usadas repetidamente durante el desarrollo de este repo, aunque nunca se publicaron).
 
 ### Restauración probada: Paperless
