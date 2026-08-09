@@ -207,7 +207,7 @@ Una vez instalado, cada `start-mcp-*.bat` de `scripts\` arranca su propio servid
 
 ### 4.9 Secretos de los scripts
 
-Copia `scripts/secrets.local.bat.example` a `scripts/secrets.local.bat` y rellena tu token real de Paperless (Ajustes → API Tokens en la interfaz de Paperless-ngx).
+Copia `scripts/secrets.local.bat.example` a `scripts/secrets.local.bat` y rellena tu token real de Paperless (Ajustes → API Tokens en la interfaz de Paperless-ngx) y tu clave de Immich (Ajustes → API Keys) — esta última solo hace falta para `listar_personas` en `mcp_fotos.py`, basta con permisos de solo lectura (`person.read`, `asset.read`, `face.read`).
 
 ### 4.10 Tareas programadas
 
@@ -238,7 +238,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `indexar_pdfs.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
 | `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados`, `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
-| `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos` y `estadisticas_fotos`; genera una galería HTML con los resultados. |
+| `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos` y `listar_personas` (nombre y nº de fotos de cada persona identificada en Immich — filtra y cuenta en código para no mandarle al modelo el JSON completo de `/api/people`, mismo motivo que `contar_documentos`); genera una galería HTML con los resultados de las búsquedas. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
 | `revisar.py` | Genera un HTML interactivo para revisar a ojo los duplicados y descargar la lista de lo que se confirma borrar. |
 | `limpiar.py` | Mueve a cuarentena los duplicados confirmados en `revision.html`. Nunca borra directamente; pide escribir "SI" para continuar. |
@@ -447,7 +447,7 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 **Pendiente, en este orden:**
 
 1. **Probar la restauración del resto del backup** contra el Orange Pi — ChromaDB, fotos, vídeos, documentos y la base de datos de Immich. De los seis bloques que respalda `backup-orangepi.bat`, solo Paperless tiene su restauración probada.
-2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
+2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
 3. **Revisar la API key de Immich**: comprobar que es una clave dedicada de mínimo privilegio para `ImmichMCP`, no una clave de administrador reutilizada.
 
 **Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:

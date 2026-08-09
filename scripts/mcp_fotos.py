@@ -22,6 +22,7 @@ from config_rutas import (
     CARPETA_DB as CHROMA_PATH,   # mismo chroma/ que documentos, otra coleccion
     OLLAMA_BASE as OLLAMA,
     MODELO_EMBED_FOTOS as MODELO_EMBED,
+    IMMICH_BASE_URL,
 )
 
 try:
@@ -228,6 +229,84 @@ def estadisticas_fotos() -> str:
         y = ", ".join(f"{k}: {v}" for k, v in sorted(anios.items()))
         salida.append(f"{etiqueta}: {total} indexados. Carpetas: {c}. Por anio: {y}")
     return "\n".join(salida)
+
+
+def _cabecera():
+    clave = os.environ.get("IMMICH_API_KEY")
+    if not clave:
+        return None
+    return {"x-api-key": clave}
+
+
+def _contar_fotos_persona(cab, person_id):
+    """Cuenta las fotos de una persona paginando /api/search/metadata.
+    La clave de API de este proyecto no tiene permiso de estadisticas
+    (asset.statistics / person.statistics), asi que no hay atajo: hay que
+    pedir los resultados y contarlos. size=1000 para que la inmensa mayoria
+    de personas resuelvan en una sola llamada; sigue la paginacion
+    (nextPage) por si alguna supera eso."""
+    total = 0
+    pagina = None
+    while True:
+        cuerpo = {"personIds": [person_id], "size": 1000}
+        if pagina:
+            cuerpo["page"] = pagina
+        r = requests.post(
+            f"{IMMICH_BASE_URL}/api/search/metadata", headers=cab, json=cuerpo, timeout=30
+        )
+        r.raise_for_status()
+        assets = r.json()["assets"]
+        total += len(assets["items"])
+        pagina = assets.get("nextPage")
+        if not pagina:
+            break
+    return total
+
+
+@mcp.tool()
+def listar_personas() -> str:
+    """Lista las personas con nombre asignado en Immich y cuantas fotos
+    tiene cada una. Solo nombre y recuento: nada de IDs, miniaturas ni
+    fechas.
+
+    Usa esta herramienta para preguntas tipo "que personas tengo
+    etiquetadas en las fotos" o "cuantas fotos hay de X". No sirve para
+    buscar fotos por contenido (para eso esta buscar_fotos); esta solo
+    lista quien esta identificado y cuanto aparece.
+    """
+    cab = _cabecera()
+    if cab is None:
+        return "Falta la variable de entorno IMMICH_API_KEY."
+
+    try:
+        r = requests.get(f"{IMMICH_BASE_URL}/api/people", headers=cab, timeout=30)
+        r.raise_for_status()
+        personas = r.json()["people"]
+    except requests.RequestException as e:
+        return f"No se pudo consultar Immich: {e}"
+
+    con_nombre = sorted(
+        (p for p in personas if p.get("name")), key=lambda p: p["name"].lower()
+    )
+    sin_nombre = len(personas) - len(con_nombre)
+
+    if not con_nombre:
+        return "No hay ninguna persona con nombre asignado en Immich."
+
+    lineas = []
+    for p in con_nombre:
+        try:
+            n = _contar_fotos_persona(cab, p["id"])
+        except requests.RequestException:
+            n = "?"
+        lineas.append(f"- {p['name']}: {n} fotos")
+
+    lineas.append("")
+    lineas.append(
+        f"{len(con_nombre)} personas con nombre"
+        + (f" ({sin_nombre} caras detectadas sin nombre, no incluidas)." if sin_nombre else ".")
+    )
+    return "\n".join(lineas)
 
 
 if __name__ == "__main__":
