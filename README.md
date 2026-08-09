@@ -207,6 +207,19 @@ Copia `scripts/secrets.local.bat.example` a `scripts/secrets.local.bat` y rellen
 
 Ver sección 7 para el detalle de cómo engancharlas al Programador de tareas de Windows.
 
+### 4.11 Aider con fallback local (opcional)
+
+Esto no es parte del montaje que usa el día a día: es la herramienta que el autor usa para editar el propio código de este repo desde WSL. Se documenta por si te sirve para tu caso, no hace falta para que el resto del stack funcione.
+
+**Cuándo usarlo:** cuando se agotan los tokens de Claude a mitad de sesión y hace falta seguir editando código sin esperar. No es un sustituto habitual: es solo para tapar el hueco.
+
+**Cómo configurarlo:**
+1. Copia [aider/.aider.conf.yml.example](aider/.aider.conf.yml.example) a tu proyecto (o a tu `$HOME`), renómbralo (por ejemplo `.aider.conf.yml.local`) y rellena la IP de tu WSL siguiendo las instrucciones del propio archivo.
+2. Asegúrate de tener el modelo descargado: `ollama pull qwen2.5-coder:14b-32k`.
+3. Lánzalo explícitamente con `aider -c .aider.conf.yml.local` — Aider no cambia de modelo solo, la elección es siempre manual.
+
+**Limitaciones, en serio:** `qwen2.5-coder:14b` es muy inferior a Claude para tareas que tocan varios archivos o requieren entender contexto amplio del proyecto. Úsalo solo para cambios acotados y prompts simples, y revisa siempre el código que genere antes de aceptarlo — con un modelo de este tamaño, más que con Claude.
+
 ## 5. Los scripts
 
 Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-*.bat`) se explican en la sección 7; aquí solo los scripts que hacen el trabajo real.

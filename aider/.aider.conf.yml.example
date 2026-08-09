@@ -1,0 +1,30 @@
+# Perfil de Aider para cuando se agotan los tokens de Claude.
+# NO es el modo normal: por defecto Aider usa Claude (ANTHROPIC_API_KEY como
+# variable de entorno, no va en este archivo). Este perfil aparte es solo
+# para cuando Claude no está disponible y hace falta seguir con algo local.
+#
+# Uso: copia este archivo como .aider.conf.yml.local (o el nombre que
+# prefieras) en la raíz de tu proyecto, y lánzalo explícitamente:
+#   aider -c .aider.conf.yml.local
+# Si lo renombras directamente a .aider.conf.yml, pasa a ser el modo POR
+# DEFECTO (Aider no hace fallback automático entre modelos: la elección
+# siempre es manual).
+#
+# Requiere tener el modelo descargado en Ollama:
+#   ollama pull qwen2.5-coder:14b-32k
+
+model: ollama_chat/qwen2.5-coder:14b-32k
+
+# Desde WSL2, "localhost" NO llega al Ollama que corre en Windows: hace
+# falta la IP del host tal como la ve WSL2 (no es la de tu LAN). Dos formas
+# de obtenerla:
+#   cat /etc/resolv.conf | grep nameserver
+#   ip route | grep default
+# Pon esa IP en las dos variables de abajo, en tu .env.aider.local (ver
+# --env-file más abajo) o directamente exportadas en tu ~/.bashrc:
+#   export OLLAMA_HOST=http://TU_IP_WSL:11434
+#   export OLLAMA_API_BASE=http://TU_IP_WSL:11434
+
+# Modelo más barato para resúmenes y mensajes de commit — evita gastar el
+# modelo principal en tareas triviales. Opcional, coméntalo si no lo usas.
+weak-model: ollama_chat/qwen2.5-coder:14b-32k

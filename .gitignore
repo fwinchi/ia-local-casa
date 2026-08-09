@@ -1,5 +1,9 @@
 scripts/secrets.local.bat
 docker/**/.env
+aider/.aider.conf.yml.local
+.aider.conf.yml
+.aider.conf.yml.local
+.env.aider.local
 
 # Documento interno de trabajo, no se publica
 CONTEXTO-PROYECTO.md
