@@ -3,7 +3,11 @@ name: immich
 services:
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:release
+    # Fijado al digest en uso el 2026-08-09 (era :release). Para actualizar:
+    #   docker pull ghcr.io/immich-app/immich-server:release
+    #   docker inspect --format "{{index .RepoDigests 0}}" ghcr.io/immich-app/immich-server:release
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: ghcr.io/immich-app/immich-server@sha256:b434cb9287eea1471c9974845914d4dd328c9c2d652e446ed4930f99944f0ceb
     volumes:
       - ${UPLOAD_LOCATION}:/usr/src/app/upload
       - ${EXTERNAL_LIBRARY_LOCATION}:/mnt/media/externo:ro
@@ -21,7 +25,11 @@ services:
 
   immich-machine-learning:
     container_name: immich_machine_learning
-    image: ghcr.io/immich-app/immich-machine-learning:release-cuda
+    # Fijado al digest en uso el 2026-08-09 (era :release-cuda). Para actualizar:
+    #   docker pull ghcr.io/immich-app/immich-machine-learning:release-cuda
+    #   docker inspect --format "{{index .RepoDigests 0}}" ghcr.io/immich-app/immich-machine-learning:release-cuda
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: ghcr.io/immich-app/immich-machine-learning@sha256:82d3f6a093455964508052e0b3bc55a91075b48b65be35e78b40774a72c1ebb3
     volumes:
       - model-cache:/cache
     env_file:
@@ -40,14 +48,22 @@ services:
 
   redis:
     container_name: immich_redis
-    image: docker.io/valkey/valkey:8-bookworm
+    # Fijado al digest en uso el 2026-08-09 (era :8-bookworm). Para actualizar:
+    #   docker pull docker.io/valkey/valkey:8-bookworm
+    #   docker inspect --format "{{index .RepoDigests 0}}" docker.io/valkey/valkey:8-bookworm
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: docker.io/valkey/valkey@sha256:fea8b3e67b15729d4bb70589eb03367bab9ad1ee89c876f54327fc7c6e618571
     healthcheck:
       test: redis-cli ping || exit 1
     restart: unless-stopped
 
   database:
     container_name: immich_postgres
-    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    # Fijado al digest en uso el 2026-08-09 (era :14-vectorchord0.4.3-pgvectors0.2.0). Para actualizar:
+    #   docker pull ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    #   docker inspect --format "{{index .RepoDigests 0}}" ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    # y sustituye el digest de abajo por el que devuelva ese comando.
+    image: ghcr.io/immich-app/postgres@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: ${DB_USERNAME}
