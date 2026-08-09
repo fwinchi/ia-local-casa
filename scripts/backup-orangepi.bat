@@ -7,6 +7,8 @@ set IP=192.168.1.XXX
 REM Usuario SSH con permiso de escritura en el destino.
 set USUARIO=TU_USUARIO
 REM Ruta base en el destino donde se guardaran los seis subdirectorios (paperless, chroma, fotos, videos, documentos, immich-db).
+REM El volcado del volumen de Open WebUI no tiene subdirectorio propio:
+REM viaja dentro de paperless/export/, porque se genera ahi antes del scp.
 set DESTINO_BASE=/home/TU_USUARIO/backup-nasa
 REM Usuario de Windows dueno de la carpeta "Documents\Documentos para indexar"
 REM (para construir su ruta /mnt/c/Users/... vista desde WSL). Es tu cuenta
@@ -36,14 +38,29 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 2. Copiar Paperless al destino (volcado completo, no incremental)
+REM 2. Open WebUI: volcado del volumen Docker (historial de chats,
+REM    uploads, vector_db, credenciales de usuarios...) via un
+REM    contenedor alpine desechable. --exclude=./cache porque esa
+REM    carpeta es solo cache regenerable y pesa ~1 GB (comprobado). El
+REM    tar.gz se escribe DENTRO de D:\paperless\export a proposito, y
+REM    este paso va ANTES del scp del paso 3 para que quede incluido en
+REM    ese mismo scp: si fuera despues, el volcado de hoy no se subiria
+REM    hasta manana.
+docker run --rm -v open-webui:/data -v D:\paperless\export:/backup alpine sh -c "tar czf /backup/openwebui-volume.tar.gz --exclude=./cache -C /data ."
+if errorlevel 1 (
+    echo ERROR: fallo el volcado del volumen de Open WebUI
+    exit /b 1
+)
+
+REM 3. Copiar Paperless (+ el volcado de Open WebUI de arriba) al destino
+REM    (volcado completo, no incremental)
 scp -r -q "D:\paperless\export" %USUARIO%@%IP%:%DESTINO_BASE%/paperless/
 if errorlevel 1 (
     echo ERROR: fallo el scp de Paperless
     exit /b 1
 )
 
-REM 3. ChromaDB: espejo exacto con --delete. Es un indice reconstruible,
+REM 4. ChromaDB: espejo exacto con --delete. Es un indice reconstruible,
 REM    interesa que el destino refleje exactamente lo que hay hoy.
 wsl rsync -a --delete /mnt/d/paperless/chroma/ %USUARIO%@%IP%:%DESTINO_BASE%/chroma/
 if errorlevel 1 (
@@ -51,7 +68,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 4. Fotos: SIN --delete a proposito. Si el disco externo falla o se
+REM 5. Fotos: SIN --delete a proposito. Si el disco externo falla o se
 REM    desmonta mal, --delete borraria la copia buena del destino.
 REM    Aqui se prefiere acumular a arriesgar.
 wsl rsync -a /mnt/f/FOTOS/ %USUARIO%@%IP%:%DESTINO_BASE%/fotos/
@@ -60,14 +77,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 5. Videos: mismo criterio que fotos, sin --delete.
+REM 6. Videos: mismo criterio que fotos, sin --delete.
 wsl rsync -a /mnt/f/VIDEOS/ %USUARIO%@%IP%:%DESTINO_BASE%/videos/
 if errorlevel 1 (
     echo ERROR: fallo el rsync de videos
     exit /b 1
 )
 
-REM 6. Documentos a indexar: mismo criterio que fotos y videos, sin
+REM 7. Documentos a indexar: mismo criterio que fotos y videos, sin
 REM    --delete. La ruta tiene un espacio ("Documentos para indexar"), y
 REM    wsl reconstruye la linea de comandos como texto antes de pasarla a
 REM    Linux, asi que las comillas dobles del .bat no sobreviven solas:
@@ -79,7 +96,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 7. Base de datos de Immich: pg_dump dentro de su propio contenedor
+REM 8. Base de datos de Immich: pg_dump dentro de su propio contenedor
 REM    Postgres (immich_postgres), igual que el export de Paperless usa
 REM    su propio contenedor. -Fc (formato personalizado) en vez de SQL
 REM    plano: se restaura con pg_restore, no con psql. Las extensiones de
@@ -106,7 +123,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 8. Marcar como hecho hoy - solo si los siete pasos anteriores salieron bien
+REM 9. Marcar como hecho hoy - solo si los ocho pasos anteriores salieron bien
 >"%MARCA%" echo %HOY%
 echo [%date% %time%] Backup completado
 
