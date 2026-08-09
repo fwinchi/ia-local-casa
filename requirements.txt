@@ -29,6 +29,6 @@ odfpy==1.4.1
 
 # Fotos/vídeos (indexar_fotos.py, indexar_videos.py, duplicados.py, revisar.py,
 # organizar_fotos.py, mcp_fotos.py): decodificar imágenes, HEIC y detectar duplicados
-pillow==12.2.0
+pillow==12.3.0
 pillow_heif==1.5.0
 ImageHash==4.3.2
