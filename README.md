@@ -465,6 +465,8 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 
 Verifica que el servicio sigue respondiendo antes de dar la actualización por buena. Por ejemplo, para Tika desde dentro del contenedor de Paperless: `curl http://tika:9998/tika` debe dar `200`.
 
+**Dependabot ([`.github/dependabot.yml`](.github/dependabot.yml)) vigila las dependencias de Python** (`requirements.txt`) semanalmente, con un límite bajo de PRs abiertos a la vez. **No vigila las imágenes Docker.** Se comprobó a propósito antes de activarlo: todas están fijadas por digest sin tag, y Dependabot resuelve una referencia solo-digest contra el tag `:latest` del registro — en vez de avisar de una actualización dentro de la misma versión, abriría PRs proponiendo saltar a lo que sea que `:latest` tenga en cada momento (Postgres 16 → 17, por ejemplo), justo lo contrario de fijar por digest. Tampoco vigila GitHub Actions: el repo no tiene workflows. Las imágenes Docker se siguen actualizando a mano, con el procedimiento de arriba.
+
 ## 10. Guía de uso diaria
 
 ### Chuleta: qué modelo y qué herramienta

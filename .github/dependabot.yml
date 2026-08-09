@@ -1,0 +1,26 @@
+# Dependabot: avisos de vulnerabilidades y PRs de actualización de dependencias.
+#
+# Solo "pip" está activado. El ecosistema "docker" se evaluó y se
+# descartó a propósito, no por olvido: todas las imágenes de este repo
+# están fijadas por digest SIN tag (image: repo@sha256:..., ver
+# docker/*/docker-compose.yml) — a propósito, para congelar una versión
+# concreta que ya se sabe que funciona (ver README, sección "Cómo
+# actualizar una imagen fijada a digest"). Dependabot resuelve una
+# referencia que solo tiene digest (sin tag) contra el tag ":latest"
+# del registro. Eso significa que en vez de avisar de una actualización
+# dentro de la misma versión, abriría PRs proponiendo saltar a lo que
+# sea que ":latest" tenga en cada momento — por ejemplo, de Postgres 16
+# a Postgres 17 sin que nadie lo haya decidido. Justo lo contrario de
+# fijar por digest. Las actualizaciones de imágenes Docker se siguen
+# haciendo a mano, con el procedimiento ya documentado en el README.
+#
+# No hay "github-actions" activado: el repo no tiene workflows en
+# .github/workflows.
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
