@@ -193,27 +193,33 @@ A partir de aquí, Open WebUI y los scripts ya pueden usar `gptoss-paperless` y 
 
 No necesita instalación ni contenedor propio: es la librería `chromadb` de Python, que cada script abre directamente sobre la carpeta `chroma\` (ver 4.0). Se crea sola la primera vez que ejecutas un script de indexado.
 
-### 4.8 mcpo
+### 4.8 Dependencias Python
 
-Instalado con pip, sobre el mismo entorno Python que usan los scripts:
+Todos los scripts de `scripts\` y `mcpo` corren sobre el mismo Python que usan los `.bat`: **Python 3.14**, instalado en `%USERPROFILE%\AppData\Local\Python\pythoncore-3.14-64` (el ejecutable que invocan los lanzadores es `...\bin\python.exe`).
+
+Instala todo de una vez, con las versiones exactas que corren hoy en la instalación real — verificadas contra `pip freeze`, mismo criterio que los digests de Docker: congelar lo que funciona, no abrir rangos:
 
 ```bash
-pip install mcpo
+%USERPROFILE%\AppData\Local\Python\bin\python.exe -m pip install -r requirements.txt
 ```
 
-Versión usada: `0.0.20`.
+Ver [`requirements.txt`](requirements.txt) para el detalle de qué usa cada script.
+
+### 4.9 mcpo
+
+Se instala junto con el resto en `requirements.txt` (sección anterior). Versión usada: `0.0.20`.
 
 Una vez instalado, cada `start-mcp-*.bat` de `scripts\` arranca su propio servidor (puertos documentados en la sección 3).
 
-### 4.9 Secretos de los scripts
+### 4.10 Secretos de los scripts
 
 Copia `scripts/secrets.local.bat.example` a `scripts/secrets.local.bat` y rellena tu token real de Paperless (Ajustes → API Tokens en la interfaz de Paperless-ngx) y tu clave de Immich (Ajustes → API Keys) — esta última solo hace falta para `listar_personas` en `mcp_fotos.py`, basta con permisos de solo lectura (`person.read`, `asset.read`, `face.read`).
 
-### 4.10 Tareas programadas
+### 4.11 Tareas programadas
 
 Ver sección 7 para el detalle de cómo engancharlas al Programador de tareas de Windows.
 
-### 4.11 Aider con fallback local (opcional)
+### 4.12 Aider con fallback local (opcional)
 
 Esto no es parte del montaje que usa el día a día: es la herramienta que el autor usa para editar el propio código de este repo desde WSL. Se documenta por si te sirve para tu caso, no hace falta para que el resto del stack funcione.
 
