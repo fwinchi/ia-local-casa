@@ -1,0 +1,77 @@
+# Paperless aislado para PROBAR una restauración desde el backup, sin
+# tocar el Paperless real. Instrucciones completas en el README,
+# sección 9 ("Restauración probada: Paperless").
+#
+# Aislamiento: nombres de contenedor y volúmenes con prefijo "restore-",
+# puerto 8012 en el host (ni 8010 -el real- ni 8011 -lo ocupa AIssist-),
+# Postgres y Redis propios y vacíos. Sin AIssist, sin Tika, sin
+# Gotenberg: no hacen falta para importar un export ya generado, solo
+# para procesar documentos nuevos.
+#
+# Mismas imágenes fijadas por digest que docker/paperless/docker-compose.yml,
+# para restaurar sobre la versión exacta que generó el backup.
+#
+# Uso:
+#   1. Copia esta carpeta fuera del repo (o usa esta misma) y crea en
+#      ella una subcarpeta export/ con el contenido descargado del backup.
+#   2. docker compose up -d
+#   3. docker exec restore-webserver document_importer /usr/src/paperless/export
+#   4. Verifica en http://localhost:8012 que los documentos, corresponsales,
+#      etiquetas y campos personalizados llegaron bien.
+#   5. docker compose down -v   (se lleva por delante los volúmenes de prueba)
+
+name: restore-test
+
+services:
+  restore-broker:
+    image: docker.io/library/redis@sha256:595cc6f2bb3af6e03347b90deb6123c6aa2c81dea05ce08128de8a174b6ac67b
+    container_name: restore-broker
+    restart: "no"
+    volumes:
+      - restore-redisdata:/data
+
+  restore-db:
+    image: docker.io/library/postgres@sha256:33f923b05f64ca54ac4401c01126a6b92afe839a0aa0a52bc5aeb5cc958e5f20
+    container_name: restore-db
+    restart: "no"
+    volumes:
+      - restore-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: restoretest
+
+  restore-webserver:
+    image: docker.io/paperlessngx/paperless-ngx@sha256:17312f00bac06f8dad09d67c6c8c069fc5c076c0c22313241c673102dfaf8ee9
+    container_name: restore-webserver
+    restart: "no"
+    depends_on:
+      - restore-db
+      - restore-broker
+    ports:
+      - "127.0.0.1:8012:8000"
+    volumes:
+      - restore-data:/usr/src/paperless/data
+      - restore-media:/usr/src/paperless/media
+      - ./export:/usr/src/paperless/export
+      - restore-consume:/usr/src/paperless/consume
+    environment:
+      PAPERLESS_REDIS: redis://restore-broker:6379
+      PAPERLESS_DBHOST: restore-db
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: restoretest
+      PAPERLESS_TIME_ZONE: Europe/Madrid
+      PAPERLESS_SECRET_KEY: clave-de-prueba-solo-para-este-restore-no-reutilizar
+      PAPERLESS_URL: http://localhost:8012
+
+volumes:
+  restore-pgdata:
+    name: restore-pgdata
+  restore-redisdata:
+    name: restore-redisdata
+  restore-data:
+    name: restore-data
+  restore-media:
+    name: restore-media
+  restore-consume:
+    name: restore-consume
