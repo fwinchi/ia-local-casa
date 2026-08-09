@@ -127,6 +127,8 @@ Instálalo y déjalo en marcha (con integración WSL2 si vas a usar la GPU para 
 2. Rellena `IMMICH_API_KEY` con una clave generada desde la interfaz de Immich (Ajustes → API Keys).
 3. `docker compose up -d`.
 
+**Por qué `docker-compose.yml` lleva `extra_hosts: host.docker.internal:host-gateway`:** Immich corre en el host Windows (puerto `2283`), no dentro de la red Docker del contenedor `immichmcp` — son dos `docker compose up` distintos, en carpetas distintas, sin red compartida. `IMMICH_BASE_URL=http://host.docker.internal:2283` (en `.env.example`) necesita que el contenedor sepa resolver `host.docker.internal`, y ese `extra_hosts` es lo que se lo garantiza de forma explícita en vez de depender de que Docker Desktop lo añada por su cuenta.
+
 ### 4.5 LiteLLM (pasarela a Gemini)
 
 1. Copia `docker/litellm/docker-compose.yml`, `config.yaml` y `.env.example` a su propia carpeta.
@@ -375,6 +377,25 @@ Verificadas las 8 funcionando igual con `Limited`.
 - No reutilices los valores de ejemplo de este README ni de los `.env.example`: genera los tuyos propios en cada instalación.
 - Seis servicios están restringidos a `127.0.0.1` y no son alcanzables desde ningún otro dispositivo de tu red: los cuatro `mcpo` (8001, 8002, 8003, 8004), LiteLLM (4000) e ImmichMCP (5000). Paperless (8010) e Immich (2283) se dejan deliberadamente accesibles en tu red local — sin eso no podrías usarlos desde el móvil — y no llevan más autenticación que la propia de cada aplicación. No los expongas a internet sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) puede alcanzarlos igual que tu móvil.
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
+
+### Modelo de seguridad
+
+Resumen de una página, deducido del código real, no de memoria:
+
+**Qué escucha en `127.0.0.1` (solo el propio PC, ningún otro dispositivo de la red puede alcanzarlo):**
+- Los cuatro `mcpo`: 8001 (Paperless), 8002 (PDFs OneDrive), 8003 (Fotos disco externo), 8004 (ImmichMCP).
+- LiteLLM: 4000.
+- ImmichMCP: 5000.
+
+**Qué está expuesto a la LAN, y por qué:**
+- Paperless (8010) e Immich (2283). Deliberado: es la única forma de usarlos desde el móvil sin montar una VPN. No llevan más autenticación que la propia de cada aplicación — cualquier otro dispositivo de tu WiFi los alcanza igual que tu móvil.
+
+**Dónde viven los secretos:**
+- Tokens, claves de API y contraseñas viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders.
+
+**Qué queda pendiente:**
+- Ollama (11434) escucha en todas las interfaces, sin autenticación — no se ha atado a `127.0.0.1` porque rompería el acceso desde WSL (Aider lo usa así). Falta una regla de firewall que lo restrinja a la subred de WSL en vez de dejarlo abierto a toda la red.
+- Rotar la API key de Immich y la de Google AI Studio (usadas repetidamente durante el desarrollo de este repo, aunque nunca se publicaron).
 
 ### Auditoría de arquitectura
 
