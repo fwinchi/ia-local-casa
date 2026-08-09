@@ -39,24 +39,30 @@ Lo que sí se sabe con certeza: la VRAM es el límite real. `gpt-oss:20b` es el 
 Son tres circuitos independientes. Conviene explicarlo así desde el principio porque es lo que más confunde al empezar: no hay un único "pipeline", hay tres que no dependen entre sí.
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph C1["Circuito 1 · Paperless"]
+        direction LR
         A1["Carpeta consume"] --> A2["OCR"] --> A3["AIssist extrae campos"] --> A4["autocorresponsal.py<br>asigna remitente"]
     end
 
     subgraph C2["Circuito 2 · Índice de documentos"]
+        direction LR
         B1["Carpetas de documentos<br>(OneDrive, Documents...)<br>PDF / DOCX / TXT / ODT"] --> B2["indexar_pdfs.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
         B3 --> B4["buscar_en_pdfs"]
     end
 
     subgraph C3["Circuito 3 · Fotos y vídeos"]
+        direction LR
         D1["Disco externo<br>FOTOS / VIDEOS"] --> D2["indexar_fotos.py /<br>indexar_videos.py<br>describe con visión"] --> D3[(ChromaDB)]
         D3 --> D4["buscar_fotos /<br>buscar_videos"]
     end
 
     subgraph C4["Immich · aparte"]
+        direction LR
         E1["Biblioteca externa<br>(solo lectura)"] --> E2["Caras y personas"]
     end
+
+    C1 ~~~ C2 ~~~ C3 ~~~ C4
 ```
 
 1. **Paperless** — lo que se deja en la carpeta `consume` se OCR-iza, AIssist extrae los campos y `autocorresponsal.py` asigna el remitente.
