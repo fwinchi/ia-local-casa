@@ -12,22 +12,9 @@ import chromadb
 import requests
 from mcp.server.fastmcp import FastMCP
 
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
-CARPETA_DB = str(BASE / "chroma")
-OLLAMA = "http://localhost:11434/api/embeddings"
-MODELO = "bge-m3"
+from config_rutas import CARPETAS_PDFS, CARPETA_DB, OLLAMA, MODELO, EXTENSIONES
+
 PAPERLESS_API = "http://localhost:8010/api"
-
-# Las mismas carpetas que indexa indexar_pdfs.py. abrir_pdf solo puede abrir
-# archivos dentro de ellas, nunca una ruta arbitraria del sistema.
-CARPETAS_PDFS = [
-    (Path.home() / "OneDrive" / "Documentos" / "Documentos para indexar").resolve(),
-    (Path.home() / "Documents" / "Documentos para indexar").resolve(),
-]
-
-# Mismos formatos que indexa indexar_pdfs.py (su EXTENSIONES) — si se amplía
-# uno, hay que ampliar el otro.
-EXTENSIONES_ABRIBLES = {".pdf", ".docx", ".txt", ".odt"}
 
 mcp = FastMCP("Documentos")
 
@@ -103,9 +90,9 @@ def abrir_pdf(ruta: str) -> str:
                 f"dentro de las carpetas indexadas ({', '.join(str(c) for c in CARPETAS_PDFS)}).")
     if not ruta_path.is_file():
         return f"No existe el archivo: {ruta}"
-    if ruta_path.suffix.lower() not in EXTENSIONES_ABRIBLES:
+    if ruta_path.suffix.lower() not in EXTENSIONES:
         return (f"Solo se pueden abrir archivos "
-                f"{', '.join(sorted(EXTENSIONES_ABRIBLES))}.")
+                f"{', '.join(sorted(EXTENSIONES))}.")
     os.startfile(str(ruta_path))
     return f"Abierto en el programa predeterminado: {ruta_path.name}"
 

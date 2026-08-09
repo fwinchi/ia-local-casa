@@ -16,20 +16,10 @@ from odf.opendocument import load as cargar_odt
 from odf.text import P as OdtParrafo
 from pypdf import PdfReader
 
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
-
-CARPETAS_PDFS = [
-    Path.home() / "OneDrive" / "Documentos" / "Documentos para indexar",
-    Path.home() / "Documents" / "Documentos para indexar",
-]
-CARPETA_DB = str(BASE / "chroma")
-OLLAMA = "http://localhost:11434/api/embeddings"
-MODELO = "bge-m3"
+from config_rutas import BASE, CARPETAS_PDFS, CARPETA_DB, OLLAMA, MODELO, EXTENSIONES
 
 TAM_TROZO = 1200      # caracteres por fragmento
 SOLAPE = 200          # solape entre fragmentos
-
-EXTENSIONES = [".pdf", ".docx", ".txt", ".odt"]
 
 
 def embedding(texto):

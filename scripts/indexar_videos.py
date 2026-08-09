@@ -19,16 +19,18 @@ from pathlib import Path
 import chromadb
 import requests
 
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
+from config_rutas import (
+    CARPETA_DB as CHROMA_PATH,   # mismo chroma/ que documentos, otra coleccion
+    OLLAMA_BASE as OLLAMA,
+    MODELO_VISION,
+    MODELO_EMBED_FOTOS as MODELO_EMBED,
+)
+
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
 ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_VIDEOS = "VIDEOS"
-CHROMA_PATH = str(BASE / "chroma")
 COLECCION = "videos"
-OLLAMA = "http://localhost:11434"
-MODELO_VISION = "vl-paperless"
-MODELO_EMBED = "nomic-embed-text"
 FOTOGRAMAS = 3
 ANCHO_MAX = 896
 LOG = SCRIPTS / "indexar_videos.log"

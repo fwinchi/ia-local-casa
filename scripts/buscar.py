@@ -7,14 +7,11 @@ O sin argumentos, para preguntar en bucle.
 import json
 import sys
 import urllib.request
-from pathlib import Path
 
 import chromadb
 
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
-CARPETA_DB = str(BASE / "chroma")
-OLLAMA = "http://localhost:11434/api/embeddings"
-MODELO = "bge-m3"
+from config_rutas import CARPETA_DB, OLLAMA, MODELO
+
 RESULTADOS = 5
 
 

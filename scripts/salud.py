@@ -5,17 +5,13 @@ from datetime import datetime, timedelta
 from html import escape
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent.parent
+from config_rutas import BASE, CARPETAS_PDFS
+
 SCRIPTS = Path(__file__).resolve().parent
 SALIDA = SCRIPTS / "salud.html"
 
 PAPERLESS = "http://localhost:8010"
 TOKEN = os.environ.get("PAPERLESS_TOKEN", "")
-
-CARPETAS_PDFS = [
-    Path.home() / "OneDrive" / "Documentos",
-    Path.home() / "Documents" / "Documentos para indexar",
-]
 
 ETIQUETA_DISCO_EXTERNO = "Multimedia IA"
 

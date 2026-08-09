@@ -18,20 +18,22 @@ import requests
 from mcp.server.fastmcp import FastMCP
 from PIL import Image
 
+from config_rutas import (
+    CARPETA_DB as CHROMA_PATH,   # mismo chroma/ que documentos, otra coleccion
+    OLLAMA_BASE as OLLAMA,
+    MODELO_EMBED_FOTOS as MODELO_EMBED,
+)
+
 try:
     from pillow_heif import register_heif_opener
     register_heif_opener()
 except Exception:
     pass
 
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
-CHROMA_PATH = str(BASE / "chroma")
 COL_FOTOS = "fotos"
 COL_VIDEOS = "videos"
-OLLAMA = "http://localhost:11434"
-MODELO_EMBED = "nomic-embed-text"
 SALIDA = SCRIPTS / "resultados_fotos.html"
 MINIATURA = 300
 DISTANCIA_MAX = 0.55

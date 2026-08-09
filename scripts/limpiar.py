@@ -9,7 +9,8 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 
-BASE = Path(__file__).resolve().parent.parent      # antes: D:\paperless
+from config_rutas import BASE
+
 SCRIPTS = Path(__file__).resolve().parent            # antes: D:\paperless\scripts
 
 LISTA = SCRIPTS / "duplicados_confirmados.json"

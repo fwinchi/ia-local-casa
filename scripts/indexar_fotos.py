@@ -19,6 +19,13 @@ import chromadb
 import requests
 from PIL import Image, ExifTags
 
+from config_rutas import (
+    CARPETA_DB as CHROMA_PATH,   # mismo chroma/ que documentos, otra coleccion
+    OLLAMA_BASE as OLLAMA,
+    MODELO_VISION,
+    MODELO_EMBED_FOTOS as MODELO_EMBED,
+)
+
 try:
     from pillow_heif import register_heif_opener
     register_heif_opener()
@@ -26,16 +33,11 @@ except Exception:
     pass
 
 # --- Configuracion ---
-BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
 ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
-CHROMA_PATH = str(BASE / "chroma")
 COLECCION = "fotos"
-OLLAMA = "http://localhost:11434"
-MODELO_VISION = "vl-paperless"
-MODELO_EMBED = "nomic-embed-text"
 LADO_MAX = 896          # se reescala antes de mandar al modelo (mas rapido)
 LOG = SCRIPTS / "indexar_fotos.log"
 
