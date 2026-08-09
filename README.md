@@ -420,7 +420,7 @@ Resumen de una página, deducido del código real, no de memoria:
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
 
 **Qué queda pendiente:**
-- Rotar la API key de Immich y la de Google AI Studio (usadas repetidamente durante el desarrollo de este repo, aunque nunca se publicaron).
+- Rotar la API key de Google AI Studio (usada repetidamente durante el desarrollo de este repo, aunque nunca se publicó). La de Immich ya se rotó: clave nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin), y la antigua, con permiso `all`, eliminada de Immich.
 
 ### Restauración probada: Paperless
 
@@ -449,12 +449,12 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 - **AIssist (8011) restringido a `127.0.0.1`** — quedaba publicado en la LAN sin que nadie lo hubiera revisado.
 - **Imágenes Docker fijadas a un digest** en vez de tags flotantes, en todo el stack: Paperless-ngx, Tika, Redis, Postgres, Gotenberg, AIssist, ImmichMCP, LiteLLM, Immich (server, machine-learning, su Postgres y su Redis/Valkey) ya no usan `:latest`/`:release`/tags sueltos. Motivo concreto, no solo teórico: LiteLLM tuvo versiones maliciosas publicadas en PyPI en marzo de 2026. No queda ninguna imagen flotante en el repo.
 - **Restauración de Paperless probada** contra un contenedor aislado ([`docker/paperless-restore-test/`](docker/paperless-restore-test/docker-compose.yml)) — ver «Restauración probada: Paperless» arriba. Los 26 documentos del export llegaron con corresponsales, etiquetas y campos personalizados intactos.
+- **API key de Immich rotada a una de mínimo privilegio** — la clave antigua tenía permiso `all` (equivalente a administrador), reutilizada por `ImmichMCP` y `mcp_fotos.py`. Se eliminó de Immich y se sustituyó por una nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin).
 
 **Pendiente, en este orden:**
 
 1. **Probar la restauración del resto del backup** contra el Orange Pi — ChromaDB, fotos, vídeos, documentos y la base de datos de Immich. De los seis bloques que respalda `backup-orangepi.bat`, solo Paperless tiene su restauración probada.
-2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt.
-3. **Revisar la API key de Immich**: comprobar que es una clave dedicada de mínimo privilegio para `ImmichMCP`, no una clave de administrador reutilizada.
+2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
 
 **Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:
 
