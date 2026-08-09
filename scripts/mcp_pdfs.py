@@ -21,7 +21,7 @@ PAPERLESS_API = "http://localhost:8010/api"
 # Las mismas carpetas que indexa indexar_pdfs.py. abrir_pdf solo puede abrir
 # archivos dentro de ellas, nunca una ruta arbitraria del sistema.
 CARPETAS_PDFS = [
-    (Path.home() / "OneDrive" / "Documentos").resolve(),
+    (Path.home() / "OneDrive" / "Documentos" / "Documentos para indexar").resolve(),
     (Path.home() / "Documents" / "Documentos para indexar").resolve(),
 ]
 

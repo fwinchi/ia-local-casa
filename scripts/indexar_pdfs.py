@@ -19,7 +19,7 @@ from pypdf import PdfReader
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 
 CARPETAS_PDFS = [
-    Path.home() / "OneDrive" / "Documentos",
+    Path.home() / "OneDrive" / "Documentos" / "Documentos para indexar",
     Path.home() / "Documents" / "Documentos para indexar",
 ]
 CARPETA_DB = str(BASE / "chroma")

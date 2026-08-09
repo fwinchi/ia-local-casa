@@ -510,7 +510,7 @@ Deben salir los cuatro. Si falta alguno, lanzarlo a mano:
 
 - Las herramientas de Open WebUI se conectan con **`localhost`**, nunca con `host.docker.internal`. (Los modelos, al revés.)
 - Después de reiniciar el PC, dar un minuto antes de usar nada: los servicios tardan en levantar.
-- Las carpetas que se indexan son solo dos: `OneDrive\Documentos` y `Documents\Documentos para indexar`. Lo demás no existe para el buscador.
+- Las carpetas que se indexan son solo dos, ambas con el mismo nombre de subcarpeta: `OneDrive\Documentos\Documentos para indexar` y `Documents\Documentos para indexar`. Lo demás no existe para el buscador — antes se indexaba `OneDrive\Documentos` entero y arrastraba basura (configs y logs de videojuegos, cachés de DaVinci).
 - Una sola herramienta activada a la vez.
 - Los modelos de Google se configuran en el `config.yaml` de LiteLLM; tras cambiarlo, `docker compose restart`.
 - Antes de borrar cualquier cosa, hacer copia.
