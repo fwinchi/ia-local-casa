@@ -25,6 +25,10 @@ CARPETAS_PDFS = [
     (Path.home() / "Documents" / "Documentos para indexar").resolve(),
 ]
 
+# Mismos formatos que indexa indexar_pdfs.py (su EXTENSIONES) — si se amplía
+# uno, hay que ampliar el otro.
+EXTENSIONES_ABRIBLES = {".pdf", ".docx", ".txt", ".odt"}
+
 mcp = FastMCP("Documentos")
 
 cliente = chromadb.PersistentClient(path=CARPETA_DB)
@@ -86,8 +90,9 @@ def listar_pdfs_indexados() -> str:
 
 @mcp.tool()
 def abrir_pdf(ruta: str) -> str:
-    """Abre un PDF del usuario en el visor predeterminado de Windows para que
-    pueda verlo. Usa la ruta exacta devuelta por buscar_en_pdfs.
+    """Abre un documento del usuario (PDF, DOCX, TXT u ODT) en el programa
+    predeterminado de Windows para que pueda verlo. Usa la ruta exacta
+    devuelta por buscar_en_pdfs.
 
     Args:
         ruta: ruta completa del archivo, tal como aparece en los resultados.
@@ -98,10 +103,11 @@ def abrir_pdf(ruta: str) -> str:
                 f"dentro de las carpetas indexadas ({', '.join(str(c) for c in CARPETAS_PDFS)}).")
     if not ruta_path.is_file():
         return f"No existe el archivo: {ruta}"
-    if ruta_path.suffix.lower() != ".pdf":
-        return "Solo se pueden abrir archivos PDF."
+    if ruta_path.suffix.lower() not in EXTENSIONES_ABRIBLES:
+        return (f"Solo se pueden abrir archivos "
+                f"{', '.join(sorted(EXTENSIONES_ABRIBLES))}.")
     os.startfile(str(ruta_path))
-    return f"Abierto en el visor de Windows: {ruta_path.name}"
+    return f"Abierto en el programa predeterminado: {ruta_path.name}"
 
 
 def _cabecera():
