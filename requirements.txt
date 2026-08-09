@@ -1,0 +1,34 @@
+# Dependencias reales de scripts/, verificadas contra lo que importa cada
+# .py del repo (no una lista supuesta) y fijadas a la versión exacta que
+# corre hoy en producción — mismo criterio que los digests de Docker:
+# congelar lo que funciona, no abrir rangos. Verificado el 2026-08-10 con
+# %USERPROFILE%\AppData\Local\Python\bin\python.exe -m pip freeze
+#
+# Requiere Python 3.14 (la instalación real usa
+# %USERPROFILE%\AppData\Local\Python\pythoncore-3.14-64).
+#
+# Instalar con:
+#   %USERPROFILE%\AppData\Local\Python\bin\python.exe -m pip install -r requirements.txt
+
+# Servidor MCP -> OpenAPI para Open WebUI (arranca cada mcpo.exe de scripts/start-mcp-*.bat)
+mcpo==0.0.20
+
+# SDK de MCP: FastMCP, usado por mcp_pdfs.py y mcp_fotos.py
+mcp==1.28.1
+
+# ChromaDB: base semántica de documentos y de fotos/vídeos
+chromadb==1.5.9
+
+# HTTP: llamadas a Paperless, Ollama e Immich
+requests==2.32.3
+
+# Documentos (indexar_pdfs.py): PDF, DOCX, ODT
+pypdf==6.14.2
+python-docx==1.2.0
+odfpy==1.4.1
+
+# Fotos/vídeos (indexar_fotos.py, indexar_videos.py, duplicados.py, revisar.py,
+# organizar_fotos.py, mcp_fotos.py): decodificar imágenes, HEIC y detectar duplicados
+pillow==12.2.0
+pillow_heif==1.5.0
+ImageHash==4.3.2
