@@ -353,7 +353,7 @@ Es el prompt que usa **Paperless-AIssist** para leer cada documento nuevo y rell
 
 ### `openwebui-gptoss.md`
 
-Es el *system prompt* del modelo `gptoss-paperless` en Open WebUI. Su trabajo es evitar que el modelo local conteste "no tengo acceso a eso" cuando sí tiene herramientas para averiguarlo, y que no confunda las cuatro fuentes distintas de información con las que puede toparse: Paperless (`tool_*`), PDFs sueltos de OneDrive (`buscar_en_documentos`), el índice local de fotos/vídeos del disco externo (`buscar_fotos`/`buscar_videos`) y la biblioteca Immich (`immich_*`).
+Es el *system prompt* del modelo `gptoss-paperless` en Open WebUI. Su trabajo es evitar que el modelo local conteste "no tengo acceso a eso" cuando sí tiene herramientas para averiguarlo, y que no confunda las cuatro fuentes distintas de información con las que puede toparse: Paperless (`tool_*`), documentos sueltos de OneDrive (`buscar_en_documentos`), el índice local de fotos/vídeos por contenido (`buscar_fotos`/`buscar_videos`) y los datos de Immich sobre personas, lugar y fecha (`listar_personas`, `listar_personas_sin_nombre`, `fotos_por_lugar`, `fotos_por_fecha`) — las cuatro últimas del mismo servidor MCP (`mcp_fotos.py`, puerto 8003).
 
 ### Lecciones detrás de estas reglas
 
@@ -595,7 +595,7 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 %USERPROFILE%\AppData\Local\Python\bin\python.exe <TU_RAIZ>\scripts\indexar_documentos.py
 ```
 
-**Cómo lo consulto:** Open WebUI, modelo `gptoss-paperless`, herramienta **PDFs OneDrive**. Ej.: *"¿qué dice el informe del traumatólogo?"*
+**Cómo lo consulto:** Open WebUI, modelo `gptoss-paperless`, herramienta **Documentos OneDrive**. Ej.: *"¿qué dice el informe del traumatólogo?"*
 
 > Indexa **PDF, DOCX, TXT y ODT**. Si escaneas en JPG, no entra aquí.
 > Si el PDF viene escaneado sin texto, hay que pasarle OCR (ver punto 7) — DOCX/TXT/ODT nunca lo necesitan, siempre traen texto nativo.
