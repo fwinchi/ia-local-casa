@@ -6,6 +6,8 @@ Ejecutar cada vez que anadas documentos nuevos: solo procesa los que faltan.
 
 import hashlib
 import json
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -27,8 +29,15 @@ def embedding(texto):
     req = urllib.request.Request(
         OLLAMA, data=datos, headers={"Content-Type": "application/json"}
     )
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.loads(r.read())["embedding"]
+    esperas = (2, 4)   # backoff entre intentos, en segundos
+    for intento in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                return json.loads(r.read())["embedding"]
+        except (ConnectionResetError, urllib.error.URLError, TimeoutError):
+            if intento == 2:
+                raise
+            time.sleep(esperas[intento])
 
 
 def trocear(texto):
