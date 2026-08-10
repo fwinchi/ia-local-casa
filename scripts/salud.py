@@ -18,8 +18,8 @@ ETIQUETA_DISCO_EXTERNO = "Multimedia IA"
 PUERTOS = {8001: "Paperless MCP", 8002: "PDFs", 8003: "Fotos/Videos", 8004: "Immich"}
 CONTENEDORES = ["paperless", "immich", "litellm", "open-webui", "openwebui"]
 MODELOS = ["gptoss-paperless", "vl3-paperless", "bge-m3", "nomic-embed-text"]
-TAREAS = ["autocorresponsal", "vigilante-duplicados", "indexar-pdfs",
-          "organizador-descargas", "mcpo-paperless", "mcp-pdfs", "mcp-fotos", "mcp-immich"]
+TAREAS = ["autocorresponsal", "vigilante-duplicados", "indexar-documentos",
+          "organizador-descargas", "mcpo-paperless", "mcp-documentos", "mcp-fotos", "mcp-immich"]
 PATRONES_ESPERADOS = ("decrypted", "encrypted", "cifrad", "encriptad", "signature", "firma digital")
 
 # Fecha en español si el sistema tiene ese locale disponible; si no, formato numérico.

@@ -34,7 +34,7 @@ def embedding(texto):
 
 
 @mcp.tool()
-def buscar_en_pdfs(pregunta: str, resultados: int = 5) -> str:
+def buscar_en_documentos(pregunta: str, resultados: int = 5) -> str:
     """Busca por significado en los PDFs personales del usuario guardados en
     OneDrive (informes medicos, tramites, hacienda, seguros, manuales, guias).
 
@@ -67,26 +67,26 @@ def buscar_en_pdfs(pregunta: str, resultados: int = 5) -> str:
 
 
 @mcp.tool()
-def listar_pdfs_indexados() -> str:
+def listar_documentos_indexados() -> str:
     """Devuelve la lista de archivos PDF que estan indexados y por tanto se
-    pueden consultar con buscar_en_pdfs."""
+    pueden consultar con buscar_en_documentos."""
     datos = col.get(include=["metadatas"])
     archivos = sorted({m["archivo"] for m in datos["metadatas"]})
     return f"{len(archivos)} PDFs indexados:\n" + "\n".join(archivos)
 
 
 @mcp.tool()
-def abrir_pdf(ruta: str) -> str:
+def abrir_documento(ruta: str) -> str:
     """Abre un documento del usuario (PDF, DOCX, TXT u ODT) en el programa
     predeterminado de Windows para que pueda verlo. Usa la ruta exacta
-    devuelta por buscar_en_pdfs.
+    devuelta por buscar_en_documentos.
 
     Args:
         ruta: ruta completa del archivo, tal como aparece en los resultados.
     """
     ruta_path = Path(ruta).resolve()
     if not any(ruta_path.is_relative_to(c) for c in CARPETAS_PDFS):
-        return (f"Ruta no permitida: {ruta}. abrir_pdf solo puede abrir archivos "
+        return (f"Ruta no permitida: {ruta}. abrir_documento solo puede abrir archivos "
                 f"dentro de las carpetas indexadas ({', '.join(str(c) for c in CARPETAS_PDFS)}).")
     if not ruta_path.is_file():
         return f"No existe el archivo: {ruta}"

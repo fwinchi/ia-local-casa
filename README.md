@@ -48,7 +48,7 @@ flowchart TB
     subgraph C2["Circuito 2 · Índice de documentos"]
         direction LR
         B1["Carpetas de documentos<br>(OneDrive, Documents...)<br>PDF / DOCX / TXT / ODT"] --> B2["indexar_documentos.py<br>trocea + embebe (bge-m3)"] --> B3[(ChromaDB)]
-        B3 --> B4["buscar_en_pdfs"]
+        B3 --> B4["buscar_en_documentos"]
     end
 
     subgraph C3["Circuito 3 · Fotos y vídeos"]
@@ -107,7 +107,7 @@ Antes de tocar nada: elige una carpeta raíz para tu instalación (en este READM
   data\ media\ export\ consume\   ← las crea sola Paperless al arrancar
 ```
 
-Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_documentos.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
+Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
 
 ### 4.1 Docker Desktop
 
@@ -184,7 +184,7 @@ A partir de aquí, Open WebUI y los scripts ya pueden usar `gptoss-paperless` y 
 - `gpt-oss:20b` — base de `gptoss-paperless`.
 - `qwen3-vl:8b` — base de `vl3-paperless`.
 - `qwen2.5-coder:14b` — base de `qwen2.5-coder:14b-32k`.
-- `bge-m3` — embeddings de `indexar_documentos.py`/`mcp_pdfs.py`.
+- `bge-m3` — embeddings de `indexar_documentos.py`/`mcp_documentos.py`.
 - `nomic-embed-text` — embeddings de `indexar_fotos.py`/`indexar_videos.py`/`mcp_fotos.py`.
 
 **`ollama list` puede dar tamaños engañosos.** Dos nombres distintos pueden compartir exactamente el mismo blob en disco si son el mismo modelo sin cambios — el ID es el que lo delata, no el nombre. Por ejemplo, en una instalación real `gptoss-paperless` y otro modelo sin relación (`web-search`) compartían ID (`1efcb56daf08`, 13 GB): son el mismo fichero en disco con dos nombres, borrar uno con `ollama rm` no libera esos 13 GB si el otro nombre lo sigue referenciando. Antes de borrar algo para liberar espacio, comprueba con `ollama list` si su ID se repite en otro nombre que quieras conservar.
@@ -240,9 +240,9 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 |---|---|
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
-| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_documentos.py`, `mcp_pdfs.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
+| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
 | `indexar_documentos.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
-| `mcp_pdfs.py` | Servidor MCP: expone `buscar_en_pdfs`, `listar_pdfs_indexados`, `abrir_pdf` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
+| `mcp_documentos.py` | Servidor MCP: expone `buscar_en_documentos`, `listar_documentos_indexados`, `abrir_documento` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos` y `listar_personas` (nombre y nº de fotos de cada persona identificada en Immich — filtra y cuenta en código para no mandarle al modelo el JSON completo de `/api/people`, mismo motivo que `contar_documentos`); genera una galería HTML con los resultados de las búsquedas. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
@@ -267,7 +267,7 @@ Es el prompt que usa **Paperless-AIssist** para leer cada documento nuevo y rell
 
 ### `openwebui-gptoss.md`
 
-Es el *system prompt* del modelo `gptoss-paperless` en Open WebUI. Su trabajo es evitar que el modelo local conteste "no tengo acceso a eso" cuando sí tiene herramientas para averiguarlo, y que no confunda las cuatro fuentes distintas de información con las que puede toparse: Paperless (`tool_*`), PDFs sueltos de OneDrive (`buscar_en_pdfs`), el índice local de fotos/vídeos del disco externo (`buscar_fotos`/`buscar_videos`) y la biblioteca Immich (`immich_*`).
+Es el *system prompt* del modelo `gptoss-paperless` en Open WebUI. Su trabajo es evitar que el modelo local conteste "no tengo acceso a eso" cuando sí tiene herramientas para averiguarlo, y que no confunda las cuatro fuentes distintas de información con las que puede toparse: Paperless (`tool_*`), PDFs sueltos de OneDrive (`buscar_en_documentos`), el índice local de fotos/vídeos del disco externo (`buscar_fotos`/`buscar_videos`) y la biblioteca Immich (`immich_*`).
 
 ### Lecciones detrás de estas reglas
 
@@ -297,7 +297,7 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
   2. `indexar_fotos.py`, también **esperando**.
   3. `indexar_videos.py`, **sin esperar** — se lanza en segundo plano y la tarea programada se da por completada aunque el indexado de vídeos siga corriendo.
 - **`run-indexar.bat`**, **`run-organizador.bat`** — cada uno llama a su script Python correspondiente; se lanzan a través de `oculto.vbs` para no mostrar consola.
-- **`start-mcp-fotos.bat`**, **`start-mcp-pdfs.bat`**, **`start-mcp-immich.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
+- **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcp-immich.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
 - **`run-duplicados.bat`** — no tiene tarea programada propia. Es un lanzador manual para forzar una revisión de duplicados fuera del ciclo automático de `vigilante-duplicados` (que ya hace su propia comprobación llamando directamente a `revisar.py` desde `vigilante.py`).
 - **`salud.bat`** — tampoco tiene tarea programada. Es para ejecutar a mano cuando quieras un diagnóstico del stack; por eso, a diferencia de los demás `.bat`, termina con `pause` (para poder leer el resultado en la consola) y no pasa por `oculto.vbs`.
 
@@ -309,10 +309,10 @@ Creadas con `schtasks` desde PowerShell como Administrador:
 |---|---|---|
 | `autocorresponsal` | `run-autocorresponsal.vbs` | Repetición cada 15 minutos |
 | `vigilante-duplicados` | `run-vigilante.vbs` | Repetición cada 15 minutos |
-| `indexar-pdfs` | `oculto.vbs` + `run-indexar.bat` | Al iniciar sesión |
+| `indexar-documentos` | `oculto.vbs` + `run-indexar.bat` | Al iniciar sesión |
 | `organizador-descargas` | `oculto.vbs` + `run-organizador.bat` | Al iniciar sesión |
 | `mcpo-paperless` | `oculto.vbs` + `start-mcpo.bat` | Al iniciar sesión |
-| `mcp-pdfs` | `oculto.vbs` + `start-mcp-pdfs.bat` | Al iniciar sesión |
+| `mcp-documentos` | `oculto.vbs` + `start-mcp-documentos.bat` | Al iniciar sesión |
 | `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | Al iniciar sesión |
 | `mcp-immich` | `oculto.vbs` + `start-mcp-immich.bat` | Al iniciar sesión |
 
@@ -361,7 +361,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **El selector de herramientas de Open WebUI muestra el nombre que declara el propio
   servidor MCP** (`FastMCP("...")` en Python, o el título de la especificación
   OpenAPI), no el nombre que le pongas a la conexión en Ajustes de Open WebUI. Ha
-  confundido dos veces — con ImmichMCP y con `mcp_pdfs.py` (antes `"pdfs-onedrive"`,
+  confundido dos veces — con ImmichMCP y con `mcp_documentos.py` (antes `"pdfs-onedrive"`,
   ahora `"Documentos"`).
 - **`gpt-oss:20b` vuelca el JSON crudo en vez de sintetizar cuando una herramienta
   devuelve un array grande.** Con ~26 documentos completos (metadatos, custom fields,
@@ -371,7 +371,7 @@ Verificadas las 8 funcionando igual con `Limited`.
   de configuración, es el modelo con `temperature 0.1` encajando la forma del dato en
   un patrón de su entrenamiento. La solución no es ajustar el prompt: es dar
   herramientas deterministas que devuelvan valores ya calculados en vez de listas que
-  el modelo tenga que procesar (`contar_documentos` en `mcp_pdfs.py` es el primer
+  el modelo tenga que procesar (`contar_documentos` en `mcp_documentos.py` es el primer
   ejemplo).
 - **Modelos locales y mundo exterior**: `gpt-oss:20b` inventa y defiende lo inventado.
   Ningún prompt de anclaje lo arregla. Local para documentos propios, nube para el
@@ -381,7 +381,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **Cuotas de la capa gratuita de Google**: los modelos nuevos dan 20 peticiones/día;
   los `-lite` son mucho más generosos.
 - **Verificar siempre importes y fechas** abriendo el documento. Por eso existe
-  `abrir_pdf`.
+  `abrir_documento`.
 
 ## 9. Limitaciones y qué no hacer
 
@@ -389,7 +389,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 
 - **No reconoce personas en fotos ni vídeos.** Los prompts de descripción (`indexar_fotos.py`, `indexar_videos.py`) instruyen explícitamente al modelo de visión: *"no inventes nombres de personas ni lugares"*. Nunca te dirá quién aparece en una foto. El reconocimiento de caras y personas es cosa de Immich (biblioteca aparte, herramientas `immich_*`), no de este índice.
 - **El modelo local puede inventar.** `gpt-oss:20b` inventa cuando le preguntas algo que no está en tus documentos, y defiende lo inventado si insistes (sección 8). No lo uses como fuente de verdad fuera de tus propios archivos.
-- **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_pdf`.
+- **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_documento`.
 - **La detección de duplicados nunca borra nada por sí sola.** `duplicados.py`/`revisar.py` generan un informe; `limpiar.py` solo mueve a cuarentena, y solo tras escribir "SI" explícitamente. Borrar de verdad es un paso manual tuyo, aparte.
 - **Hay un script de backup; la restauración de Paperless ya está probada, el resto todavía no.** [`scripts/backup-orangepi.bat`](scripts/backup-orangepi.bat) copia el volcado de Paperless, ChromaDB, fotos, vídeos, los documentos a indexar, la base de datos de Immich y el volumen Docker de Open WebUI (chats, prompts guardados, configuración) a un Raspberry/Orange Pi por red (`scp`/`rsync`/`pg_dump`/`docker run` vía WSL). ChromaDB se sincroniza como espejo exacto (`--delete`, es un índice reconstruible); fotos, vídeos y documentos se acumulan sin `--delete` a propósito, para no arriesgarse a borrar la copia buena si el disco externo falla o se desmonta mal. Del volumen de Open WebUI se excluye `./cache` a propósito: son modelos de embeddings regenerables, ~1 GB — sin excluirlos el volcado pesa 21 MB en vez de más de 1 GB. La restauración de Paperless se probó con éxito contra un contenedor aislado (procedimiento y resultado más abajo, «Restauración probada: Paperless»); ChromaDB, fotos, vídeos, documentos, la base de datos de Immich y el volumen de Open WebUI siguen sin probarse (ver «Auditoría de arquitectura» más abajo). Si no adaptas y programas este script (o el tuyo propio), no hay ninguna copia de seguridad automática de nada.
 - **Solo se respalda una de las dos carpetas de documentos, a propósito.** `indexar_documentos.py` lee de dos sitios (sección 9, «Reglas que ya me han costado tiempo»): `OneDrive\Documentos\Documentos para indexar` y `Documents\Documentos para indexar`. El backup a Orange Pi solo copia la segunda. La de OneDrive no lo necesita: OneDrive ya la sincroniza a la nube de Microsoft por su cuenta, así que respaldarla también al Orange Pi sería una copia redundante de algo que ya está a salvo en otro sitio. La de `Documents` es puramente local — si no la respaldas tú, no hay ninguna otra copia en ningún sitio.
@@ -417,10 +417,7 @@ Resumen de una página, deducido del código real, no de memoria:
 
 **Dónde viven los secretos:**
 - Tokens, claves de API y contraseñas (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean, **ni siquiera en un commit temporal que luego borres**: el historial de git los conservaría igual. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders — no reutilices esos valores ni los de este README, genera los tuyos propios en cada instalación.
-- Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY` al preparar este repo.
-
-**Qué queda pendiente:**
-- Rotar la API key de Google AI Studio (usada repetidamente durante el desarrollo de este repo, aunque nunca se publicó). La de Immich ya se rotó: clave nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin), y la antigua, con permiso `all`, eliminada de Immich.
+- Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY`, la de Immich y la de Google AI Studio al preparar este repo — las tres se rotaron por eso, no porque hubiera indicios de uso indebido.
 
 ### Restauración probada: Paperless
 
@@ -450,11 +447,12 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 - **Imágenes Docker fijadas a un digest** en vez de tags flotantes, en todo el stack: Paperless-ngx, Tika, Redis, Postgres, Gotenberg, AIssist, ImmichMCP, LiteLLM, Immich (server, machine-learning, su Postgres y su Redis/Valkey) ya no usan `:latest`/`:release`/tags sueltos. Motivo concreto, no solo teórico: LiteLLM tuvo versiones maliciosas publicadas en PyPI en marzo de 2026. No queda ninguna imagen flotante en el repo.
 - **Restauración de Paperless probada** contra un contenedor aislado ([`docker/paperless-restore-test/`](docker/paperless-restore-test/docker-compose.yml)) — ver «Restauración probada: Paperless» arriba. Los 26 documentos del export llegaron con corresponsales, etiquetas y campos personalizados intactos.
 - **API key de Immich rotada a una de mínimo privilegio** — la clave antigua tenía permiso `all` (equivalente a administrador), reutilizada por `ImmichMCP` y `mcp_fotos.py`. Se eliminó de Immich y se sustituyó por una nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin).
+- **API key de Google AI Studio rotada** — la clave usada por LiteLLM (`D:\litellm\config.yaml`) estaba escrita en texto plano en el propio YAML, repetida en los tres modelos. Se migró a `api_key: os.environ/GEMINI_API_KEY` con la clave en un `.env` (`docker/litellm/.env.example` en el repo), se generó una clave nueva en AI Studio, se recreó el contenedor y se verificó funcionando desde Open WebUI. La antigua quedó eliminada.
 
 **Pendiente, en este orden:**
 
 1. **Probar la restauración del resto del backup** contra el Orange Pi — ChromaDB, fotos, vídeos, documentos, la base de datos de Immich y el volumen de Open WebUI. De los siete bloques que respalda `backup-orangepi.bat`, solo Paperless tiene su restauración probada.
-2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_pdfs`, `listar_pdfs_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_pdf` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
+2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_documentos`, `listar_documentos_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_documento` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
 
 **Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:
 
@@ -564,7 +562,7 @@ Deben salir los cuatro. Si falta alguno, lanzarlo a mano:
 | Puerto | Herramienta | Arrancar con |
 |---|---|---|
 | 8001 | Paperless | `<TU_RAIZ>\scripts\start-mcpo.bat` |
-| 8002 | PDFs OneDrive | `<TU_RAIZ>\scripts\start-mcp-pdfs.bat` |
+| 8002 | PDFs OneDrive | `<TU_RAIZ>\scripts\start-mcp-documentos.bat` |
 | 8003 | Fotos Disco Externo | `<TU_RAIZ>\scripts\start-mcp-fotos.bat` |
 | 8004 | ImmichMCP | `<TU_RAIZ>\scripts\start-mcp-immich.bat` |
 
@@ -608,7 +606,7 @@ Este repositorio fue revisado por cinco herramientas distintas antes de publicar
 |---|---|---|
 | Gitleaks / TruffleHog | Secretos en el historial | Ninguno (limpio) |
 | Grok | Higiene de publicación | OCR modifica el original; puertos expuestos en LAN |
-| Kimi 3 | Código | XSS en los HTML generados; `abrir_pdf` sin validar ruta; escritura no atómica en OCR |
+| Kimi 3 | Código | XSS en los HTML generados; `abrir_documento` sin validar ruta; escritura no atómica en OCR |
 | Gemini | Configuración de red | Plan de binding a `127.0.0.1` |
 | ChatGPT | Arquitectura y rutas de ataque | `/rl highest` innecesario; `npx -y` sin versión; imágenes `:latest` |
 

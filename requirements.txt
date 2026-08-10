@@ -13,7 +13,7 @@
 # Servidor MCP -> OpenAPI para Open WebUI (arranca cada mcpo.exe de scripts/start-mcp-*.bat)
 mcpo==0.0.20
 
-# SDK de MCP: FastMCP, usado por mcp_pdfs.py y mcp_fotos.py
+# SDK de MCP: FastMCP, usado por mcp_documentos.py y mcp_fotos.py
 mcp==1.28.1
 
 # ChromaDB: base semántica de documentos y de fotos/vídeos
