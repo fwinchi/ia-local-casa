@@ -96,12 +96,12 @@ exacta.
 
 ## 4. Documentos
 
-**Estado:** conteo verificado el 10-08-2026 (dos carpetas de origen, cada una en su
-propio destino).
+**Estado:** verificado el 10-08-2026 (dos carpetas de origen, cada una en su propio
+destino).
 
 1. **Origen real**: las dos carpetas configuradas en `CARPETAS_PDFS`
-   (`scripts/config_rutas.py`): `Documents\Documentos para indexar` y
-   `OneDrive\Documentos\Documentos para indexar` — esta segunda, 98 archivos, es la que
+   (`scripts/config_rutas.py`): `Documents\Documentos para indexar` (6 archivos) y
+   `OneDrive\Documentos\Documentos para indexar` (98 archivos) — esta segunda es la que
    no se respaldaba hasta el commit `6696327` («fix: backup de la segunda carpeta
    indexada (OneDrive)»).
 2. **Destinos separados a propósito**, no un directorio compartido:
@@ -109,13 +109,13 @@ propio destino).
    `%DESTINO_BASE%/documentos-onedrive/` (carpeta OneDrive). Motivo: ambos `rsync` van
    sin `--delete` — si compartieran destino, no se podría distinguir al restaurar qué
    archivo vino de cuál de las dos carpetas de origen.
-3. **Verificación**: conteo de archivos en cada destino del NAS contra su carpeta de
-   origen correspondiente.
+3. **Restauración probada**: `rsync` desde `%DESTINO_BASE%/documentos/` y
+   `%DESTINO_BASE%/documentos-onedrive/` a una carpeta temporal aislada, sin tocar el
+   backup real. Conteos contra el origen: 6/6 y 98/98.
+4. **Limpiar**: borrar la carpeta temporal tras verificar.
 
-**Pendiente para que este bloque cumpla el mismo criterio que los bloques 2 y 3**:
-restaurar una copia a una carpeta temporal aislada y confirmar el conteo de archivos
-restaurados contra el origen — de momento solo hay conteo en el propio NAS, no una
-restauración probada de verdad.
+**Resultado real de esta prueba (10-08-2026):** 6/6 y 98/98 — coincidencia exacta en las
+dos carpetas.
 
 ## 5. Base de datos de Immich
 
