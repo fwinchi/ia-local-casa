@@ -431,7 +431,7 @@ Un backup sin restauración probada no es un backup en el que puedas confiar (se
 
 **Resultado real de esta prueba**: los 26 documentos del export llegaron con corresponsales, etiquetas y campos personalizados intactos.
 
-**Lo que falta por probar**: ChromaDB, fotos, vídeos y documentos (los otros cuatro bloques del backup) y, sobre todo, la base de datos de Immich. Esa última se restaura con `pg_restore` (no `psql`, porque el `pg_dump` del backup usa formato personalizado `-Fc`) sobre un Postgres que tenga las extensiones `vchord` y `vector` — la propia imagen de Immich fijada por digest ya las trae, así que un contenedor nuevo de esa imagen debería bastar, pero **esto no se ha probado todavía**, a diferencia de la restauración de Paperless.
+**Los otros seis bloques del backup también están verificados con restauración real**, probada el 10-08-2026: ChromaDB, fotos, vídeos, las dos carpetas de documentos (`Documents` y OneDrive), la base de datos de Immich y el volumen de Open WebUI. Procedimiento completo y resultados de cada uno, en [`docs/restauracion-backups.md`](docs/restauracion-backups.md).
 
 ### Auditoría de arquitectura
 
@@ -451,8 +451,7 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 
 **Pendiente, en este orden:**
 
-1. **Probar la restauración del resto del backup** contra el Orange Pi — ChromaDB, fotos, vídeos, las dos carpetas de documentos (`Documents` y OneDrive), la base de datos de Immich y el volumen de Open WebUI. De los ocho bloques que respalda `backup-orangepi.bat`, solo Paperless tiene su restauración probada.
-2. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_documentos`, `listar_documentos_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_documento` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
+1. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_documentos`, `listar_documentos_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_documento` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
 
 **Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:
 
