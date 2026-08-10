@@ -14,59 +14,72 @@
 
 ```mermaid
 flowchart LR
-    subgraph FUENTES["Sources"]
-        direction TB
-        F1["OneDrive / Documents<br/>(PDF · DOCX · TXT · ODT)"]
-        F2["F:\FOTOS"]
-        F3["F:\VIDEOS"]
-        F4["consume folder<br/>(invoices, receipts)"]
-        F5["External library<br/>(read-only)"]
+    subgraph NASA["NASA · Windows 11, RTX 5080 16 GB"]
+        direction LR
+        subgraph FUENTES["Sources"]
+            direction TB
+            F1["OneDrive / Documents<br/>(PDF · DOCX · TXT · ODT)"]
+            F2["F:\FOTOS"]
+            F3["F:\VIDEOS"]
+            F4["consume folder<br/>(invoices, receipts)"]
+            F5["External library<br/>(read-only)"]
+        end
+
+        subgraph PROC["Indexers / processing"]
+            direction TB
+            P1["indexar_documentos.py"]
+            P2["indexar_fotos.py<br/>indexar_videos.py"]
+            P3["Paperless-ngx + AIssist"]
+        end
+
+        subgraph ALMACEN["Storage"]
+            direction TB
+            A1[(ChromaDB)]
+            A2[(Paperless)]
+            A3[(Immich)]
+        end
+
+        subgraph MCPSRV["MCP servers"]
+            direction TB
+            M1["8001 · paperless"]
+            M2["8002 · documentos"]
+            M3["8003 · fotos"]
+        end
+
+        F1 --> P1 --> A1
+        F2 --> P2
+        F3 --> P2
+        P2 --> A1
+        F4 --> P3 --> A2
+        F5 --> A3
+
+        A1 --> M2
+        A1 --> M3
+        A2 --> M1
+
+        M1 --> MCPO["mcpo<br/>MCP → OpenAPI"]
+        M2 --> MCPO
+        M3 --> MCPO
+        MCPO --> OWU["Open WebUI"]
     end
 
-    subgraph PROC["Indexers / processing"]
+    subgraph ORANGEPI["Orange Pi 5 Plus"]
         direction TB
-        P1["indexar_documentos.py"]
-        P2["indexar_fotos.py<br/>indexar_videos.py"]
-        P3["Paperless-ngx + AIssist"]
+        BK[["~/backup-nasa/"]]
     end
 
-    subgraph ALMACEN["Storage"]
-        direction TB
-        A1[(ChromaDB)]
-        A2[(Paperless)]
-        A3[(Immich)]
-    end
-
-    subgraph MCPSRV["MCP servers"]
-        direction TB
-        M1["8001 · paperless"]
-        M2["8002 · documentos"]
-        M3["8003 · fotos"]
-    end
-
-    F1 --> P1 --> A1
-    F2 --> P2
-    F3 --> P2
-    P2 --> A1
-    F4 --> P3 --> A2
-    F5 --> A3
-
-    A1 --> M2
-    A1 --> M3
-    A2 --> M1
-
-    M1 --> MCPO["mcpo<br/>MCP → OpenAPI"]
-    M2 --> MCPO
-    M3 --> MCPO
-    MCPO --> OWU["Open WebUI"]
-
-    A2 -.->|backup| BK[["Orange Pi / NAS"]]
+    A2 -.->|backup| BK
     A1 -.->|backup| BK
     A3 -.->|backup| BK
     F2 -.->|backup| BK
     F3 -.->|backup| BK
     F1 -.->|backup| BK
 ```
+
+| Node | OS / Architecture | Services | Data paths | Ports |
+|---|---|---|---|---|
+| NASA | Windows 11, x86_64, RTX 5080 16 GB | Ollama, Open WebUI, LiteLLM, SearXNG, Paperless-ngx, ChromaDB (`PersistentClient`), Immich, mcpo (filesystem / Paperless / documentos / fotos) | `D:\paperless`, `D:\paperless\chroma`, `D:\immich` | 11434 (Ollama) · 4000 (LiteLLM) · 8080 (SearXNG) · 8010 (Paperless-ngx) · 2283 (Immich) · 8000 (mcpo filesystem) · 8001 (mcpo Paperless) · 8002 (mcpo documentos) · 8003 (mcpo fotos) |
+| Orange Pi 5 Plus | Linux, ARM64 | Backup destination | `~/backup-nasa/` (Paperless export, ChromaDB, photos, videos, Open WebUI volume) | — |
 
 Immich is a separate circuit (faces and people, read-only external library) and isn't part of this simplified diagram — the full breakdown of the three circuits and why they're independent is in section 3.
 
