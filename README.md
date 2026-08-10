@@ -1,5 +1,86 @@
 # IA local para gestión documental, imágenes y vídeo
 
+> Gestión documental y de fotos, autoalojada y con IA local: archiva, indexa y busca por contenido en tu propio PC, sin mandar tus documentos a la nube.
+
+[![Licencia del código: MIT](https://img.shields.io/badge/licencia%20c%C3%B3digo-MIT-blue.svg)](LICENSE)
+[![Licencia de la documentación: CC BY 4.0](https://img.shields.io/badge/licencia%20docs-CC%20BY%204.0-lightgrey.svg)](LICENSE-docs)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-3776AB.svg?logo=python&logoColor=white)](requirements.txt)
+[![Docker](https://img.shields.io/badge/docker-requerido-2496ED.svg?logo=docker&logoColor=white)](docker)
+![Estado: uso personal, activo](https://img.shields.io/badge/estado-uso%20personal%2C%20activo-brightgreen.svg)
+
+## El stack, de un vistazo
+
+```mermaid
+flowchart LR
+    subgraph FUENTES["Fuentes"]
+        direction TB
+        F1["OneDrive / Documents<br/>(PDF · DOCX · TXT · ODT)"]
+        F2["F:\FOTOS"]
+        F3["F:\VIDEOS"]
+        F4["Carpeta consume<br/>(facturas, recibos)"]
+        F5["Biblioteca externa<br/>(solo lectura)"]
+    end
+
+    subgraph PROC["Indexadores / procesado"]
+        direction TB
+        P1["indexar_documentos.py"]
+        P2["indexar_fotos.py<br/>indexar_videos.py"]
+        P3["Paperless-ngx + AIssist"]
+    end
+
+    subgraph ALMACEN["Almacén"]
+        direction TB
+        A1[(ChromaDB)]
+        A2[(Paperless)]
+        A3[(Immich)]
+    end
+
+    subgraph MCPSRV["Servidores MCP"]
+        direction TB
+        M1["8001 · paperless"]
+        M2["8002 · documentos"]
+        M3["8003 · fotos"]
+    end
+
+    F1 --> P1 --> A1
+    F2 --> P2
+    F3 --> P2
+    P2 --> A1
+    F4 --> P3 --> A2
+    F5 --> A3
+
+    A1 --> M2
+    A1 --> M3
+    A2 --> M1
+
+    M1 --> MCPO["mcpo<br/>MCP → OpenAPI"]
+    M2 --> MCPO
+    M3 --> MCPO
+    MCPO --> OWU["Open WebUI"]
+
+    A2 -.->|backup| BK[["Orange Pi / NAS"]]
+    A1 -.->|backup| BK
+    A3 -.->|backup| BK
+    F2 -.->|backup| BK
+    F3 -.->|backup| BK
+    F1 -.->|backup| BK
+```
+
+Immich es un circuito aparte (caras y personas, biblioteca externa en solo lectura) y ImmichMCP (8004) no entra en este diagrama simplificado — el desglose completo de los tres circuitos y por qué son independientes está en la sección 3.
+
+## Capturas
+
+*(Placeholders: capturas pendientes de añadir en `docs/img/`. Hasta entonces estos enlaces no muestran imagen.)*
+
+| | |
+|---|---|
+| ![Consulta de un documento personal en Open WebUI, con la respuesta citando el archivo y la página de origen](docs/img/openwebui-documento.png) | ![Panel de salud.html mostrando el estado de puertos mcpo, contenedores Docker y tareas programadas](docs/img/salud-dashboard.png) |
+| ![Documento en Paperless con los campos personalizados ya rellenados automáticamente por AIssist: proveedor, importe, fecha](docs/img/paperless-campos.png) | ![Galería de resultados de una búsqueda de fotos por contenido, abierta desde Open WebUI](docs/img/openwebui-fotos.png) |
+
+## Documentación
+
+- [Restauración de backups, procedimiento verificado](docs/restauracion-backups.md) — los 6 bloques del backup (ChromaDB, fotos, vídeos, documentos, base de datos de Immich, volumen de Open WebUI), con el procedimiento real de restauración y el resultado de cada prueba.
+
 ## 1. Qué es y para quién
 
 Un montaje doméstico de gestión documental y de fotos, autoalojado y con IA local: archiva y clasifica documentos automáticamente, permite preguntar por el contenido de tus PDFs y encontrar fotos y vídeos por lo que aparece en ellos, todo corriendo en tu propio PC, sin mandar tus documentos a la nube.
@@ -638,4 +719,4 @@ Dos de las auditorías analizaron versiones desactualizadas del repositorio y se
 ### Licencia
 
 - El código (`scripts/`, `docker/`) está bajo licencia **MIT** — ver [LICENSE](LICENSE).
-- La documentación (este README y `prompts/`) está bajo licencia **CC BY 4.0** — ver [LICENSE-docs](LICENSE-docs).
+- La documentación (este README, `prompts/` y `docs/`) está bajo licencia **CC BY 4.0** — ver [LICENSE-docs](LICENSE-docs).
