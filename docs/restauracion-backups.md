@@ -2,10 +2,20 @@
 
 > Documento interno de metodología. Complementa la sección «Restauración probada: Paperless»
 > del README: un backup sin restauración probada no es un backup en el que puedas confiar.
-> [`scripts/backup-orangepi.bat`](../scripts/backup-orangepi.bat) respalda siete bloques;
+> [`scripts/backup-orangepi.bat`](../scripts/backup-orangepi.bat) respalda ocho bloques;
 > este documento recoge, uno por uno, el procedimiento real seguido para probar cada
 > restauración. Una sección solo se rellena cuando la restauración se ha probado de verdad
 > contra una copia aislada — no basta con que el backup se ejecute sin error.
+
+> **Aviso operativo:** `scripts/backup-orangepi.bat` en el repo lleva los cuatro `set` de
+> configuración con placeholders (`IP=192.168.1.XXX`, `USUARIO=TU_USUARIO`,
+> `DESTINO_BASE=/home/TU_USUARIO/backup-nasa`, `USUARIO_WINDOWS=TU_USUARIO_WINDOWS`), a
+> propósito, para poder publicarlo. Cada vez que sincronices una actualización del repo
+> sobre la copia viva (`D:\paperless\scripts\backup-orangepi.bat`), esos cuatro valores
+> vuelven a quedar en placeholder y hay que restaurarlos a mano con tus datos reales — si
+> no, el backup falla en el primer `scp` con `scp: Connection closed`, porque intenta
+> conectar contra un host que no existe (`TU_USUARIO@192.168.1.XXX`). Pasó de verdad el
+> 10-08-2026 al traer el cambio de `documentos-onedrive/`.
 
 ## 1. ChromaDB (índice de documentos, fotos y vídeos)
 
@@ -49,15 +59,63 @@ Open WebUI, es ahí donde está, no en un subdirectorio propio.
 
 ## 2. Fotos
 
-*(pendiente de probar)*
+**Estado:** verificado el 10-08-2026.
+
+1. **Origen real**: `F:\FOTOS` — 2997 archivos, 4,7 GB. Backup en NAS:
+   `%USUARIO%@%IP%:%DESTINO_BASE%/fotos/` — las mismas variables que configuras en
+   `backup-orangepi.bat`.
+2. **Verificación por conteo y listado**: contar archivos a ambos lados y comparar los
+   listados de rutas relativas con `Compare-Object` — resultado `Count=0`, sin
+   diferencias entre origen y backup.
+3. **Restauración probada** sobre una subcarpeta concreta (`2023/`, no el árbol
+   completo) vía `rsync` a una carpeta temporal aislada, sin tocar el backup real:
+   106/106 archivos restaurados correctamente.
+4. **Incidencia encontrada y corregida**: había un residuo `fotos/FOTOS/` en el destino
+   del NAS — una carpeta anidada de más, resto de un `rsync` antiguo ejecutado sin la
+   barra final en el origen. (`rsync origen/ destino/`, con barra, copia el *contenido*
+   de `origen`; `rsync origen destino/`, sin barra, copia la carpeta `origen` entera
+   dentro de `destino`, añadiendo un nivel de más.) Se identificó y se eliminó del NAS.
+5. **Limpiar**: borrar la carpeta temporal usada en el paso 3.
+
+**Resultado real de esta prueba (10-08-2026):** conteo y listado coinciden exactamente
+(`Compare-Object` con `Count=0`); restauración de la subcarpeta `2023/` completa, 106/106.
 
 ## 3. Vídeos
 
-*(pendiente de probar)*
+**Estado:** verificado el 10-08-2026.
+
+1. **Origen real**: `F:\VIDEOS` — 76 archivos, 2,7 GB. Backup en NAS:
+   `%USUARIO%@%IP%:%DESTINO_BASE%/videos/`.
+2. **Restauración completa** (el volumen es pequeño, no hizo falta limitarla a una
+   subcarpeta como en fotos) vía `rsync` a una carpeta temporal aislada.
+3. **Verificar** el conteo de archivos restaurados contra el origen.
+4. **Limpiar**: borrar la carpeta temporal.
+
+**Resultado real de esta prueba (10-08-2026):** 76/76 archivos restaurados, coincidencia
+exacta.
 
 ## 4. Documentos
 
-*(pendiente de probar)*
+**Estado:** conteo verificado el 10-08-2026 (dos carpetas de origen, cada una en su
+propio destino).
+
+1. **Origen real**: las dos carpetas configuradas en `CARPETAS_PDFS`
+   (`scripts/config_rutas.py`): `Documents\Documentos para indexar` y
+   `OneDrive\Documentos\Documentos para indexar` — esta segunda, 98 archivos, es la que
+   no se respaldaba hasta el commit `6696327` («fix: backup de la segunda carpeta
+   indexada (OneDrive)»).
+2. **Destinos separados a propósito**, no un directorio compartido:
+   `%DESTINO_BASE%/documentos/` (carpeta `Documents`) y
+   `%DESTINO_BASE%/documentos-onedrive/` (carpeta OneDrive). Motivo: ambos `rsync` van
+   sin `--delete` — si compartieran destino, no se podría distinguir al restaurar qué
+   archivo vino de cuál de las dos carpetas de origen.
+3. **Verificación**: conteo de archivos en cada destino del NAS contra su carpeta de
+   origen correspondiente.
+
+**Pendiente para que este bloque cumpla el mismo criterio que los bloques 2 y 3**:
+restaurar una copia a una carpeta temporal aislada y confirmar el conteo de archivos
+restaurados contra el origen — de momento solo hay conteo en el propio NAS, no una
+restauración probada de verdad.
 
 ## 5. Base de datos de Immich
 
