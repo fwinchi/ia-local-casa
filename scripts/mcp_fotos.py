@@ -421,8 +421,8 @@ def fotos_por_lugar(lugar: str, anio: int | None = None) -> str:
 
     Usa esta herramienta para preguntas tipo "cuantas fotos tengo de Madrid"
     o "cuantas fotos de Paris hice en 2023". No sirve para ENCONTRAR o VER
-    esas fotos (para eso esta buscar_fotos o las herramientas immich_*),
-    solo para contarlas.
+    esas fotos (para eso estan buscar_fotos o buscar_videos), solo para
+    contarlas.
 
     Args:
         lugar: nombre de la ciudad o del pais tal como lo reconoce Immich en
@@ -470,7 +470,7 @@ def fotos_por_fecha(desde: str, hasta: str) -> str:
 
     Usa esta herramienta para preguntas tipo "cuantas fotos tengo entre
     marzo y julio de 2022". No sirve para ENCONTRAR o VER esas fotos (para
-    eso esta buscar_fotos o las herramientas immich_*), solo para contarlas.
+    eso estan buscar_fotos o buscar_videos), solo para contarlas.
 
     Args:
         desde: fecha de inicio del rango, formato YYYY-MM-DD (incluida).
