@@ -66,7 +66,7 @@ flowchart LR
     F1 -.->|backup| BK
 ```
 
-Immich es un circuito aparte (caras y personas, biblioteca externa en solo lectura) y ImmichMCP (8004) no entra en este diagrama simplificado — el desglose completo de los tres circuitos y por qué son independientes está en la sección 3.
+Immich es un circuito aparte (caras y personas, biblioteca externa en solo lectura) y no entra en este diagrama simplificado — el desglose completo de los tres circuitos y por qué son independientes está en la sección 3.
 
 ## Capturas
 
@@ -162,14 +162,13 @@ Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura
 | Open WebUI | Docker | Interfaz de chat |
 | ChromaDB | Fichero local | Búsqueda semántica |
 | Immich | Docker, puerto 2283 | Fotos, caras, personas |
-| ImmichMCP | Docker, puerto 5000 | Expone Immich como herramienta |
 | LiteLLM | Docker, puerto 4000 | Pasarela a modelos de Google |
-| mcpo | Windows, puertos 8001–8004 | Convierte MCP en OpenAPI para Open WebUI |
+| mcpo | Windows, puertos 8001–8003 | Convierte MCP en OpenAPI para Open WebUI |
 | OpenWhispr | Windows | Dictado por voz (Parakeet TDT 0.6B) |
 
-**Puertos mcpo:** 8001 Paperless · 8002 PDFs · 8003 Fotos/Vídeos · 8004 ImmichMCP.
+**Puertos mcpo:** 8001 Paperless · 8002 Documentos · 8003 Fotos/Vídeos.
 
-**Acceso desde la red:** mcpo (8001-8004), LiteLLM (4000) e ImmichMCP (5000) escuchan solo en `127.0.0.1` — no alcanzables desde otros dispositivos. Paperless (8010) e Immich (2283) sí son accesibles en tu red local (detalle en la sección 9).
+**Acceso desde la red:** mcpo (8001-8003) y LiteLLM (4000) escuchan solo en `127.0.0.1` — no alcanzables desde otros dispositivos. Paperless (8010) e Immich (2283) sí son accesibles en tu red local (detalle en la sección 9).
 
 **Modelos Ollama en uso:** `gptoss-paperless` (gpt-oss:20b, `num_ctx` 16384, temp 0.1), `vl3-paperless` (qwen3-vl:8b, visión), `bge-m3` (embeddings de documentos), `nomic-embed-text` (embeddings de fotos y vídeos, heredado).
 
@@ -188,7 +187,7 @@ Antes de tocar nada: elige una carpeta raíz para tu instalación (en este READM
   data\ media\ export\ consume\   ← las crea sola Paperless al arrancar
 ```
 
-Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich, ImmichMCP y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/immichmcp/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
+Esto importa porque `docker-compose.yml` monta `./export` (relativo a su propia carpeta) y los scripts Python calculan su carpeta base como "la carpeta que contiene a `scripts\`" (`Path(__file__).resolve().parent.parent`, ver [scripts/config_rutas.py](scripts/config_rutas.py), de donde lo importan `indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`, `indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py` y `limpiar.py`). Si `docker-compose.yml` y `scripts\` no están en el mismo nivel, las dos rutas dejan de coincidir. Immich y LiteLLM son independientes: cada uno puede vivir en su propia carpeta (`docker/immich/`, `docker/litellm/` de este repo), sin relación con `<TU_RAIZ>`.
 
 ### 4.1 Docker Desktop
 
@@ -208,21 +207,13 @@ Instálalo y déjalo en marcha (con integración WSL2 si vas a usar la GPU para 
 2. Rellena el `.env`: carpeta de subida, unidad de tu biblioteca externa de solo lectura, y credenciales de su base de datos.
 3. `docker compose up -d`.
 
-### 4.4 ImmichMCP
-
-1. Copia `docker/immichmcp/docker-compose.yml` y `.env.example` a su propia carpeta.
-2. Rellena `IMMICH_API_KEY` con una clave generada desde la interfaz de Immich (Ajustes → API Keys).
-3. `docker compose up -d`.
-
-**Por qué `docker-compose.yml` lleva `extra_hosts: host.docker.internal:host-gateway`:** Immich corre en el host Windows (puerto `2283`), no dentro de la red Docker del contenedor `immichmcp` — son dos `docker compose up` distintos, en carpetas distintas, sin red compartida. `IMMICH_BASE_URL=http://host.docker.internal:2283` (en `.env.example`) necesita que el contenedor sepa resolver `host.docker.internal`, y ese `extra_hosts` es lo que se lo garantiza de forma explícita en vez de depender de que Docker Desktop lo añada por su cuenta.
-
-### 4.5 LiteLLM (pasarela a Gemini)
+### 4.4 LiteLLM (pasarela a Gemini)
 
 1. Copia `docker/litellm/docker-compose.yml`, `config.yaml` y `.env.example` a su propia carpeta.
 2. Rellena `GEMINI_API_KEY` con tu clave de Google AI Studio.
 3. `docker compose up -d`.
 
-### 4.6 Ollama y los modelos locales
+### 4.5 Ollama y los modelos locales
 
 Instala Ollama (nativo en Windows, no en Docker) y descarga estos cuatro modelos base:
 
@@ -270,11 +261,11 @@ A partir de aquí, Open WebUI y los scripts ya pueden usar `gptoss-paperless` y 
 
 **`ollama list` puede dar tamaños engañosos.** Dos nombres distintos pueden compartir exactamente el mismo blob en disco si son el mismo modelo sin cambios — el ID es el que lo delata, no el nombre. Por ejemplo, en una instalación real `gptoss-paperless` y otro modelo sin relación (`web-search`) compartían ID (`1efcb56daf08`, 13 GB): son el mismo fichero en disco con dos nombres, borrar uno con `ollama rm` no libera esos 13 GB si el otro nombre lo sigue referenciando. Antes de borrar algo para liberar espacio, comprueba con `ollama list` si su ID se repite en otro nombre que quieras conservar.
 
-### 4.7 ChromaDB
+### 4.6 ChromaDB
 
 No necesita instalación ni contenedor propio: es la librería `chromadb` de Python, que cada script abre directamente sobre la carpeta `chroma\` (ver 4.0). Se crea sola la primera vez que ejecutas un script de indexado.
 
-### 4.8 Dependencias Python
+### 4.7 Dependencias Python
 
 Todos los scripts de `scripts\` y `mcpo` corren sobre el mismo Python que usan los `.bat`: **Python 3.14**, instalado en `%USERPROFILE%\AppData\Local\Python\pythoncore-3.14-64` (el ejecutable que invocan los lanzadores es `...\bin\python.exe`).
 
@@ -286,21 +277,21 @@ Instala todo de una vez, con las versiones exactas que corren hoy en la instalac
 
 Ver [`requirements.txt`](requirements.txt) para el detalle de qué usa cada script.
 
-### 4.9 mcpo
+### 4.8 mcpo
 
 Se instala junto con el resto en `requirements.txt` (sección anterior). Versión usada: `0.0.20`.
 
 Una vez instalado, cada `start-mcp-*.bat` de `scripts\` arranca su propio servidor (puertos documentados en la sección 3).
 
-### 4.10 Secretos de los scripts
+### 4.9 Secretos de los scripts
 
 Copia `scripts/secrets.local.bat.example` a `scripts/secrets.local.bat` y rellena tu token real de Paperless (Ajustes → API Tokens en la interfaz de Paperless-ngx) y tu clave de Immich (Ajustes → API Keys) — esta última solo hace falta para `listar_personas` en `mcp_fotos.py`, basta con permisos de solo lectura (`person.read`, `asset.read`, `face.read`).
 
-### 4.11 Tareas programadas
+### 4.10 Tareas programadas
 
 Ver sección 7 para el detalle de cómo engancharlas al Programador de tareas de Windows.
 
-### 4.12 Aider con fallback local (opcional)
+### 4.11 Aider con fallback local (opcional)
 
 Esto no es parte del montaje que usa el día a día: es la herramienta que el autor usa para editar el propio código de este repo desde WSL. Se documenta por si te sirve para tu caso, no hace falta para que el resto del stack funcione.
 
@@ -392,7 +383,7 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
   2. `indexar_fotos.py`, también **esperando**.
   3. `indexar_videos.py`, **sin esperar** — se lanza en segundo plano y la tarea programada se da por completada aunque el indexado de vídeos siga corriendo.
 - **`run-indexar.bat`**, **`run-organizador.bat`** — cada uno llama a su script Python correspondiente; se lanzan a través de `oculto.vbs` para no mostrar consola.
-- **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcp-immich.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
+- **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
 - **`run-duplicados.bat`** — no tiene tarea programada propia. Es un lanzador manual para forzar una revisión de duplicados fuera del ciclo automático de `vigilante-duplicados` (que ya hace su propia comprobación llamando directamente a `revisar.py` desde `vigilante.py`).
 - **`salud.bat`** — tampoco tiene tarea programada. Es para ejecutar a mano cuando quieras un diagnóstico del stack; por eso, a diferencia de los demás `.bat`, termina con `pause` (para poder leer el resultado en la consola) y no pasa por `oculto.vbs`.
 
@@ -409,7 +400,6 @@ Creadas con `schtasks` desde PowerShell como Administrador:
 | `mcpo-paperless` | `oculto.vbs` + `start-mcpo.bat` | Al iniciar sesión |
 | `mcp-documentos` | `oculto.vbs` + `start-mcp-documentos.bat` | Al iniciar sesión |
 | `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | Al iniciar sesión |
-| `mcp-immich` | `oculto.vbs` + `start-mcp-immich.bat` | Al iniciar sesión |
 
 Se crean con `schtasks ... /ru <usuario> /rl limited /f` — se ejecutan como el usuario indicado, con privilegios normales, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
 
@@ -442,22 +432,22 @@ Verificadas las 8 funcionando igual con `Limited`.
 - **Una sola herramienta activada por chat**: con varias, el modelo local llama a la
   que no toca.
 - **mcpo se queda con la sesión colgada si reinicias el servicio al que apunta.** Al
-  recrear el contenedor de ImmichMCP (puerto 5000) para cambiar su binding a
-  `127.0.0.1`, el `mcpo` del puerto 8004 (que le habla por `streamablehttp`) siguió
-  vivo pero empezó a devolver "Session terminated" — se había quedado con la sesión
-  MCP anterior, ya inválida. Hubo que reiniciar también ese `mcpo`. Norma: al tocar
-  cualquier servicio detrás de un puente `mcpo`, reinicia el puente también, no solo
-  el servicio.
-- **`Get-Process node | Stop-Process` mata los cuatro `mcpo` a la vez, no solo el que
-  buscas** — los cuatro corren como procesos `node`/`python` indistinguibles por
+  recrear un contenedor detrás de un puente `mcpo` (le pasó a un servidor MCP de
+  terceros que usaba `streamablehttp`, ya retirado) para cambiar su binding a
+  `127.0.0.1`, el `mcpo` correspondiente siguió vivo pero empezó a devolver "Session
+  terminated" — se había quedado con la sesión MCP anterior, ya inválida. Hubo que
+  reiniciar también ese `mcpo`. Norma: al tocar cualquier servicio detrás de un
+  puente `mcpo`, reinicia el puente también, no solo el servicio.
+- **`Get-Process node | Stop-Process` mata los tres `mcpo` a la vez, no solo el que
+  buscas** — los tres corren como procesos `node`/`python` indistinguibles por
   nombre. Para reiniciar uno solo: localizar su PID exacto con
   `Get-NetTCPConnection -LocalPort <puerto> -State Listen` y matar solo ese con
   `taskkill /F /PID <pid>`.
 - **El selector de herramientas de Open WebUI muestra el nombre que declara el propio
   servidor MCP** (`FastMCP("...")` en Python, o el título de la especificación
   OpenAPI), no el nombre que le pongas a la conexión en Ajustes de Open WebUI. Ha
-  confundido dos veces — con ImmichMCP y con `mcp_documentos.py` (antes `"pdfs-onedrive"`,
-  ahora `"Documentos"`).
+  confundido antes — con `mcp_documentos.py` (antes `"pdfs-onedrive"`, ahora
+  `"Documentos"`).
 - **`gpt-oss:20b` vuelca el JSON crudo en vez de sintetizar cuando una herramienta
   devuelve un array grande.** Con ~26 documentos completos (metadatos, custom fields,
   versiones...), en vez de responder el modelo se pone a reformatear los datos a un
@@ -468,6 +458,14 @@ Verificadas las 8 funcionando igual con `Limited`.
   herramientas deterministas que devuelvan valores ya calculados en vez de listas que
   el modelo tenga que procesar (`contar_documentos` en `mcp_documentos.py` es el primer
   ejemplo).
+- **ImmichMCP, retirado del todo.** Devolvía el JSON crudo de la API de Immich sin
+  filtrar (listados de personas, resultados de búsqueda...): respuestas de hasta ~56 s,
+  y `gemini-flash` a veces lo elegía en vez de la herramienta **fotos** aunque la
+  pregunta fuera por contenido, no por persona. Paginaba mal, además — el mismo tipo de
+  fallo que tuvo `listar_personas` hasta corregirse (sección 5). Sustituido por las
+  tools deterministas de `mcp_fotos.py` (`listar_personas`, `listar_personas_sin_nombre`,
+  `fotos_por_lugar`, `fotos_por_fecha`), que consultan la API de Immich directamente y
+  devuelven solo cifras ya calculadas — mismo principio que `contar_documentos`.
 - **Modelos locales y mundo exterior**: `gpt-oss:20b` inventa y defiende lo inventado.
   Ningún prompt de anclaje lo arregla. Local para documentos propios, nube para el
   resto.
@@ -482,7 +480,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 
 ### Qué no resuelve este montaje
 
-- **No reconoce personas en fotos ni vídeos.** Los prompts de descripción (`indexar_fotos.py`, `indexar_videos.py`) instruyen explícitamente al modelo de visión: *"no inventes nombres de personas ni lugares"*. Nunca te dirá quién aparece en una foto. El reconocimiento de caras y personas es cosa de Immich (biblioteca aparte, herramientas `immich_*`), no de este índice.
+- **No reconoce personas en fotos ni vídeos.** Los prompts de descripción (`indexar_fotos.py`, `indexar_videos.py`) instruyen explícitamente al modelo de visión: *"no inventes nombres de personas ni lugares"*. Nunca te dirá quién aparece en una foto. El reconocimiento de caras y personas en sí es cosa de Immich (biblioteca aparte); accesible desde Open WebUI a través de las tools de `mcp_fotos.py` que consultan su API directamente (`listar_personas`, `listar_personas_sin_nombre`), no de este índice de fotos por contenido.
 - **El modelo local puede inventar.** `gpt-oss:20b` inventa cuando le preguntas algo que no está en tus documentos, y defiende lo inventado si insistes (sección 8). No lo uses como fuente de verdad fuera de tus propios archivos.
 - **Ningún importe o fecha extraído automáticamente debe darse por bueno sin abrir el documento** — por eso existe la herramienta `abrir_documento`.
 - **La detección de duplicados nunca borra nada por sí sola.** `duplicados.py`/`revisar.py` generan un informe; `limpiar.py` solo mueve a cuarentena, y solo tras escribir "SI" explícitamente. Borrar de verdad es un paso manual tuyo, aparte.
@@ -498,9 +496,8 @@ Verificadas las 8 funcionando igual con `Limited`.
 Resumen de una página, deducido del código real, no de memoria:
 
 **Qué escucha en `127.0.0.1` (solo el propio PC, ningún otro dispositivo de la red puede alcanzarlo):**
-- Los cuatro `mcpo`: 8001 (Paperless), 8002 (PDFs OneDrive), 8003 (Fotos disco externo), 8004 (ImmichMCP).
+- Los tres `mcpo`: 8001 (Paperless), 8002 (Documentos OneDrive), 8003 (Fotos disco externo).
 - LiteLLM: 4000.
-- ImmichMCP: 5000.
 
 **Qué está expuesto a la LAN, y por qué:**
 - Paperless (8010) e Immich (2283). Deliberado: es la única forma de usarlos desde el móvil sin montar una VPN. No llevan más autenticación que la propia de cada aplicación. **No los expongas a internet** sin añadir tu propia capa de autenticación o VPN, y ten en cuenta que cualquier otro dispositivo de tu WiFi (un invitado, un IoT comprometido) los alcanza igual que tu móvil.
@@ -511,7 +508,7 @@ Resumen de una página, deducido del código real, no de memoria:
 - **Aviso 2:** si el móvil tiene una VPN activa, la IP de origen cambia y la regla bloquea la conexión — desactiva la VPN para hablar con Ollama, o añade la IP que te asigne la VPN a la regla.
 
 **Dónde viven los secretos:**
-- Tokens, claves de API y contraseñas (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, ImmichMCP, LiteLLM). Todos están en `.gitignore` — nunca se comitean, **ni siquiera en un commit temporal que luego borres**: el historial de git los conservaría igual. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders — no reutilices esos valores ni los de este README, genera los tuyos propios en cada instalación.
+- Tokens, claves de API y contraseñas (token de Paperless, claves de Immich y de Google, `PAPERLESS_SECRET_KEY`, contraseña de Postgres) viven en `secrets.local.bat` y en los distintos `.env` (uno por servicio Docker: Paperless, LiteLLM). Todos están en `.gitignore` — nunca se comitean, **ni siquiera en un commit temporal que luego borres**: el historial de git los conservaría igual. Los `.env.example`/`secrets.local.bat.example` del repo solo llevan placeholders — no reutilices esos valores ni los de este README, genera los tuyos propios en cada instalación.
 - Si un secreto llega a aparecer en un chat, una captura de pantalla o un log que no controlas del todo, trátalo como comprometido y rótalo — aunque nunca haya llegado a publicarse. Es justo lo que pasó con `PAPERLESS_SECRET_KEY`, la de Immich y la de Google AI Studio al preparar este repo — las tres se rotaron por eso, no porque hubiera indicios de uso indebido.
 
 ### Restauración probada: Paperless
@@ -539,14 +536,14 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 - **`contar_documentos` como primer ejemplo de herramienta determinista** — ver sección 8. Principio general: contar, sumar, filtrar y cruzar datos es trabajo del código, no del modelo; el LLM interpreta la pregunta y redacta la respuesta, no hace la aritmética.
 - **Rutas validadas en `limpiar.py`** — `duplicados_confirmados.json` no puede hacer que se mueva nada fuera de las carpetas de fotos/vídeos del disco externo, aunque lo genere el propio sistema (ver sección 5).
 - **AIssist (8011) restringido a `127.0.0.1`** — quedaba publicado en la LAN sin que nadie lo hubiera revisado.
-- **Imágenes Docker fijadas a un digest** en vez de tags flotantes, en todo el stack: Paperless-ngx, Tika, Redis, Postgres, Gotenberg, AIssist, ImmichMCP, LiteLLM, Immich (server, machine-learning, su Postgres y su Redis/Valkey) ya no usan `:latest`/`:release`/tags sueltos. Motivo concreto, no solo teórico: LiteLLM tuvo versiones maliciosas publicadas en PyPI en marzo de 2026. No queda ninguna imagen flotante en el repo.
+- **Imágenes Docker fijadas a un digest** en vez de tags flotantes, en todo el stack: Paperless-ngx, Tika, Redis, Postgres, Gotenberg, AIssist, LiteLLM, Immich (server, machine-learning, su Postgres y su Redis/Valkey) ya no usan `:latest`/`:release`/tags sueltos. Motivo concreto, no solo teórico: LiteLLM tuvo versiones maliciosas publicadas en PyPI en marzo de 2026. No queda ninguna imagen flotante en el repo.
 - **Restauración de Paperless probada** contra un contenedor aislado ([`docker/paperless-restore-test/`](docker/paperless-restore-test/docker-compose.yml)) — ver «Restauración probada: Paperless» arriba. Los 26 documentos del export llegaron con corresponsales, etiquetas y campos personalizados intactos.
-- **API key de Immich rotada a una de mínimo privilegio** — la clave antigua tenía permiso `all` (equivalente a administrador), reutilizada por `ImmichMCP` y `mcp_fotos.py`. Se eliminó de Immich y se sustituyó por una nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin).
+- **API key de Immich rotada a una de mínimo privilegio** — la clave antigua tenía permiso `all` (equivalente a administrador), reutilizada por `mcp_fotos.py`. Se eliminó de Immich y se sustituyó por una nueva de solo lectura acotada (`person.read`, `asset.read`, `face.read` y otros permisos de lectura, sin escritura ni admin).
 - **API key de Google AI Studio rotada** — la clave usada por LiteLLM (`D:\litellm\config.yaml`) estaba escrita en texto plano en el propio YAML, repetida en los tres modelos. Se migró a `api_key: os.environ/GEMINI_API_KEY` con la clave en un `.env` (`docker/litellm/.env.example` en el repo), se generó una clave nueva en AI Studio, se recreó el contenedor y se verificó funcionando desde Open WebUI. La antigua quedó eliminada.
 
 **Pendiente, en este orden:**
 
-1. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_documentos`, `listar_documentos_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`; `abrir_documento` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. ImmichMCP es distinto: es un servidor de terceros que sí expone tools destructivas de la API de Immich (borrar assets, álbumes, tags...). Ahí la mitigación no es de código, es de permisos: la API key que usan ImmichMCP y `listar_personas` en `mcp_fotos.py` es de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que esas llamadas fallan con `403` aunque el modelo intente hacerlas.
+1. **Documentar la amenaza de prompt injection**: el contenido de documentos, PDFs e imágenes es dato no confiable y no debe interpretarse nunca como instrucción. Las herramientas que el LLM puede usar son de solo lectura por diseño (`buscar_en_documentos`, `listar_documentos_indexados`, `contar_documentos`, `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`, `listar_personas_sin_nombre`, `fotos_por_lugar`, `fotos_por_fecha`; `abrir_documento` abre un visor, no modifica nada) — mantenerlo así es la mitigación real, más que cualquier aviso en el prompt. Las cuatro últimas llaman a la API de Immich con una clave de solo lectura acotada (`person.read`, `asset.read`, `face.read`...), así que cualquier intento de escritura fallaría con `403` aunque el modelo lo intentara.
 
 **Cómo actualizar una imagen fijada a digest.** Con `@sha256:...` en vez de un tag, `docker compose pull` ya no trae nada nuevo — un digest no cambia nunca, es justo el punto. Para actualizar de verdad:
 
@@ -566,9 +563,9 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 | Quiero... | Modelo | Herramienta activada |
 |---|---|---|
 | Consultar facturas y recibos | `gptoss-paperless` | Paperless |
-| Consultar informes, pólizas, trámites | `gptoss-paperless` | PDFs OneDrive |
+| Consultar informes, pólizas, trámites | `gptoss-paperless` | Documentos OneDrive |
 | Buscar fotos o vídeos del disco externo | `gptoss-paperless` | Fotos Disco Externo |
-| Buscar fotos por persona o cara | `gptoss-paperless` | ImmichMCP |
+| Buscar fotos por persona o cara | `gptoss-paperless` | Fotos Disco Externo |
 | Preguntar cosas del mundo | `gemini-flash` | *ninguna* |
 | Charlar o preguntas rápidas | `gemma` | *ninguna* |
 | Algo que necesite más calidad | `gemini-pro` | *ninguna* |
@@ -613,7 +610,7 @@ Verifica que el servicio sigue respondiendo antes de dar la actualización por b
 
 **Dónde:** Immich, `http://localhost:2283`.
 
-**O hablando:** Open WebUI, modelo `gptoss-paperless`, herramienta **ImmichMCP** (así aparece en el selector).
+**O hablando:** Open WebUI, modelo `gptoss-paperless`, herramienta **Fotos Disco Externo** (mismo servidor MCP que la búsqueda por contenido, puerto 8003) — tools `listar_personas` / `listar_personas_sin_nombre`. Ej.: *"¿qué personas tengo etiquetadas?"* / *"¿qué caras sin nombre tienen más fotos?"*
 
 ### 5. Dictar en vez de escribir
 
@@ -648,17 +645,16 @@ Antes de tocarlo guarda una copia del original en `<TU_RAIZ>\backup_pdfs`.
 Casi siempre es que un servicio no arrancó. Comprobar:
 
 ```
-netstat -ano | findstr ":8001 :8002 :8003 :8004"
+netstat -ano | findstr ":8001 :8002 :8003"
 ```
 
-Deben salir los cuatro. Si falta alguno, lanzarlo a mano:
+Deben salir los tres. Si falta alguno, lanzarlo a mano:
 
 | Puerto | Herramienta | Arrancar con |
 |---|---|---|
 | 8001 | Paperless | `<TU_RAIZ>\scripts\start-mcpo.bat` |
-| 8002 | PDFs OneDrive | `<TU_RAIZ>\scripts\start-mcp-documentos.bat` |
+| 8002 | Documentos OneDrive | `<TU_RAIZ>\scripts\start-mcp-documentos.bat` |
 | 8003 | Fotos Disco Externo | `<TU_RAIZ>\scripts\start-mcp-fotos.bat` |
-| 8004 | ImmichMCP | `<TU_RAIZ>\scripts\start-mcp-immich.bat` |
 
 > Todos tienen tarea programada al iniciar sesión. Si uno falla siempre, hay que revisar su tarea.
 
