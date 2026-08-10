@@ -75,7 +75,7 @@ Immich es un circuito aparte (caras y personas, biblioteca externa en solo lectu
 | | |
 |---|---|
 | ![Consulta de un documento personal en Open WebUI, con la respuesta citando el archivo y la página de origen](docs/img/openwebui-documento.png) | ![Panel de salud.html mostrando el estado de puertos mcpo, contenedores Docker y tareas programadas](docs/img/salud-dashboard.png) |
-| ![Documento en Paperless con los campos personalizados ya rellenados automáticamente por AIssist: proveedor, importe, fecha](docs/img/paperless-campos.png) | ![Galería de resultados de una búsqueda de fotos por contenido, abierta desde Open WebUI](docs/img/openwebui-fotos.png) |
+| ![Documento en Paperless con los campos personalizados ya rellenados automáticamente por AIssist: proveedor, importe, fecha](docs/img/paperless-campos.png) | ![Consulta sobre la fototeca desde Open WebUI usando tools deterministas: caras sin nombre, fotos por lugar y por fecha](docs/img/openwebui-fotos.png) |
 
 ## Documentación
 
