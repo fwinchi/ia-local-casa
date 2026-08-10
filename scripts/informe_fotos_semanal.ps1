@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Informe semanal de organizar_fotos.py (modo simulacion).
 
@@ -18,9 +18,9 @@
 $ErrorActionPreference = 'Stop'
 
 $Python  = "$env:USERPROFILE\AppData\Local\Python\bin\python.exe"
-$Script  = "D:\paperless\scripts\organizar_fotos.py"
-$Informe = "D:\paperless\scripts\organizacion_fotos.txt"
-$Log     = "D:\paperless\scripts\informe_fotos_semanal.log"
+$Script  = (Join-Path $PSScriptRoot "organizar_fotos.py")
+$Informe = (Join-Path $PSScriptRoot "organizacion_fotos.txt")
+$Log     = (Join-Path $PSScriptRoot "informe_fotos_semanal.log")
 
 function Escribir-Log {
     param([string]$Mensaje)
