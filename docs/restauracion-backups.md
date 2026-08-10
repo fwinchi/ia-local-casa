@@ -158,4 +158,32 @@ asignado 10/10, `album` 0/0 — coincidencia exacta en las cuatro tablas.
 
 ## 6. Open WebUI
 
-*(pendiente de probar)*
+**Estado:** verificado el 10-08-2026.
+
+1. **Origen real**: volumen Docker `open-webui` (historial de chats, uploads, vector_db,
+   credenciales de usuarios...), comprimido excluyendo `./cache` (modelos de embeddings
+   regenerables). Archivo: 21 MB, en
+   `%DESTINO_BASE%/paperless/export/openwebui-volume.tar.gz`. **Ojo**: no está en
+   `%DESTINO_BASE%/openwebui/` — ese subdirectorio no existe, ver la nota al final del
+   bloque 1.
+2. **Copia a una carpeta temporal aislada**: `rsync` del `.tar.gz` desde el NAS, sin
+   tocar el original del backup.
+3. **Verificar que el archivo no está corrupto antes de tocarlo**: `gzip -t` (OK).
+4. **Listar el contenido sin extraer**: `tar tzf` — 152 entradas.
+5. **Extraer**: 60 MB descomprimidos, incluye `webui.db` (14 MB), sin carpeta `cache`
+   (confirma que el `--exclude=./cache` del backup funcionó).
+6. **Verificar la integridad de la base SQLite**: `sqlite3 webui.db "PRAGMA
+   integrity_check;"` → `ok`.
+7. **Contar filas por tabla** en la copia restaurada.
+8. **Comparar contra producción**: el volumen vivo se lee sin pararlo, montándolo de
+   solo lectura en un contenedor `alpine` con `sqlite3` para consultarlo desde fuera de
+   Open WebUI.
+9. **Limpiar**: borrar la carpeta temporal usada en el paso 2.
+
+**Resultado real de esta prueba (10-08-2026):** `gzip -t` y `PRAGMA integrity_check`
+correctos; conteos, copia restaurada vs. producción: `chat` 151/151, `user` 1/1, `model`
+19/19, `prompt` 0/0 — coincidencia exacta en las cuatro tablas.
+
+---
+
+**Los 6 bloques del backup quedan verificados con restauración real el 10-08-2026.**
