@@ -279,9 +279,7 @@ def listar_personas() -> str:
         return "Falta la variable de entorno IMMICH_API_KEY."
 
     try:
-        r = requests.get(f"{IMMICH_BASE_URL}/api/people", headers=cab, timeout=30)
-        r.raise_for_status()
-        personas = r.json()["people"]
+        personas = _listar_todas_personas(cab)
     except requests.RequestException as e:
         return f"No se pudo consultar Immich: {e}"
 
