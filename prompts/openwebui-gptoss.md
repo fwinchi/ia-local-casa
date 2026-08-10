@@ -1,6 +1,6 @@
 # System prompt de Open WebUI para `gptoss-paperless`
 
-> Nota: el ejemplo de interlocutor ("odontoclinic" → "CLÍNICA EJEMPLO, B00000000")
+> Nota: el ejemplo de interlocutor ("clinica ejemplo" → "CLÍNICA EJEMPLO, B00000000")
 > es ficticio. En el original hacía referencia a un proveedor real del autor.
 
 ```
