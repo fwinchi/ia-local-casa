@@ -15,7 +15,7 @@ TOKEN = os.environ.get("PAPERLESS_TOKEN", "")
 
 ETIQUETA_DISCO_EXTERNO = "Multimedia IA"
 
-PUERTOS = {8001: "Paperless MCP", 8002: "PDFs", 8003: "Fotos/Videos", 8004: "Immich"}
+PUERTOS = {8001: "Paperless MCP", 8002: "Documentos", 8003: "Fotos/Videos"}
 CONTENEDORES = ["paperless", "immich", "litellm", "open-webui", "openwebui"]
 MODELOS = ["gptoss-paperless", "vl3-paperless", "bge-m3", "nomic-embed-text"]
 TAREAS = ["autocorresponsal", "vigilante-duplicados", "indexar-documentos",
@@ -52,6 +52,23 @@ def http(url, headers=None, timeout=8):
     req = urllib.request.Request(url, headers=headers or {})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read().decode("utf-8", "replace")
+
+
+RUTA_USUARIO_WIN = re.compile(r'([A-Za-z]:\\[Uu]sers\\)[^\\]+')
+RUTA_USUARIO_UNIX = re.compile(r'(/home/)[^/]+')
+
+
+def redactar_ruta_usuario(texto):
+    """Sustituye el nombre de usuario en rutas tipo C:\\Users\\<algo>\\ o
+    /home/<algo>/ por ***, antes de escribir en el HTML cualquier texto
+    que venga de un .log o de un nombre de archivo real. Hoy esas rutas no
+    llegan al HTML por casualidad de formato (las lineas "File ..." de un
+    traceback no contienen ni "Traceback" ni "ERROR" en mayusculas, que es
+    lo que filtra la seccion de Logs) -- esto lo hace explicito en vez de
+    depender de esa coincidencia."""
+    texto = RUTA_USUARIO_WIN.sub(lambda m: m.group(1) + "***", texto)
+    texto = RUTA_USUARIO_UNIX.sub(lambda m: m.group(1) + "***", texto)
+    return texto
 
 
 def letra_disco_externo():
@@ -197,7 +214,8 @@ for l in SCRIPTS.glob("*.log"):
 
         partes = []
         if fallos:
-            partes.append(f"{len(fallos)} línea(s) con error. Última: {fallos[-1][:120]}")
+            ultimo_fallo = redactar_ruta_usuario(fallos[-1][:120])
+            partes.append(f"{len(fallos)} línea(s) con error. Última: {ultimo_fallo}")
         if esperados:
             partes.append(f"{len(esperados)} esperado(s) (PDF cifrado/firmado, no cuentan como fallo)")
 
@@ -217,9 +235,9 @@ if consume.exists():
     atascados = [f for f in consume.iterdir()
                  if f.is_file() and ahora - datetime.fromtimestamp(f.stat().st_mtime) > timedelta(hours=1)]
     if atascados:
+        nombres = ", ".join(redactar_ruta_usuario(f.name) for f in atascados[:5])
         add("Paperless", "Carpeta consume", "error",
-            f"{len(atascados)} archivo(s) sin procesar hace más de 1 hora: "
-            + ", ".join(f.name for f in atascados[:5]))
+            f"{len(atascados)} archivo(s) sin procesar hace más de 1 hora: {nombres}")
     else:
         add("Paperless", "Carpeta consume", "ok", "Vacía o recién llegado")
 else:
