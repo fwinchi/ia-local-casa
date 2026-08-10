@@ -1,3 +1,5 @@
+[Español](README.md) · [English](README.en.md)
+
 # IA local para gestión documental, imágenes y vídeo
 
 > Gestión documental y de fotos, autoalojada y con IA local: archiva, indexa y busca por contenido en tu propio PC, sin mandar tus documentos a la nube.
