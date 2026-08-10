@@ -309,5 +309,207 @@ def listar_personas() -> str:
     return "\n".join(lineas)
 
 
+MAX_PAGINAS = 500   # limite de seguridad: nunca deberia hacer falta en una biblioteca de este tamano
+
+
+def _listar_todas_personas(cab, with_hidden=False):
+    """Pagina GET /api/people hasta agotar todas las paginas (hasNextPage).
+    El fallo de hoy fue parar en la pagina 2 por no comprobar si quedaba
+    mas: esto no da la lista por buena hasta que Immich diga que no hay
+    paginas pendientes, con un limite de seguridad para no colgarse si la
+    API se comporta de forma inesperada."""
+    personas = []
+    pagina = 1
+    for _ in range(MAX_PAGINAS):
+        r = requests.get(
+            f"{IMMICH_BASE_URL}/api/people",
+            headers=cab,
+            params={"page": pagina, "withHidden": str(with_hidden).lower()},
+            timeout=30,
+        )
+        r.raise_for_status()
+        datos = r.json()
+        personas.extend(datos.get("people", []))
+        hay_mas = datos.get("hasNextPage")
+        if hay_mas is None:
+            # Respaldo si la respuesta no trae hasNextPage: comparar contra "total".
+            total = datos.get("total")
+            hay_mas = total is not None and len(personas) < total
+        if not hay_mas:
+            break
+        pagina += 1
+    return personas
+
+
+def _buscar_assets_immich(cab, filtros):
+    """Pagina POST /api/search/metadata con los filtros dados (city,
+    country, takenAfter, takenBefore...) hasta agotar nextPage. Devuelve la
+    lista completa de assets crudos de Immich (incluye localDateTime, entre
+    otros campos)."""
+    assets = []
+    pagina = None
+    for _ in range(MAX_PAGINAS):
+        cuerpo = dict(filtros)
+        cuerpo["size"] = 1000
+        if pagina:
+            cuerpo["page"] = pagina
+        r = requests.post(
+            f"{IMMICH_BASE_URL}/api/search/metadata", headers=cab, json=cuerpo, timeout=30
+        )
+        r.raise_for_status()
+        bloque = r.json()["assets"]
+        assets.extend(bloque["items"])
+        pagina = bloque.get("nextPage")
+        if not pagina:
+            break
+    return assets
+
+
+@mcp.tool()
+def listar_personas_sin_nombre(min_fotos: int = 20) -> str:
+    """Lista las caras detectadas en Immich que TODAVIA NO tienen nombre
+    asignado, ordenadas por numero de fotos de mas a menos. Sirve para
+    decidir por donde empezar a poner nombre o a fusionar caras duplicadas
+    (las que mas se repiten primero) -- no identifica quien es cada una, ni
+    devuelve miniaturas o rutas, solo el id interno de Immich y el recuento.
+
+    Usa esta herramienta para preguntas tipo "que caras sin nombre tengo con
+    mas fotos" o "cuantas caras sin identificar hay". No sirve para VER esas
+    caras (eso es trabajo manual en la interfaz de Immich).
+
+    Args:
+        min_fotos: no incluir caras con menos fotos que este numero (por
+            defecto 20, para no listar caras casi vacias que no compensa
+            revisar).
+    """
+    cab = _cabecera()
+    if cab is None:
+        return "Falta la variable de entorno IMMICH_API_KEY."
+
+    try:
+        personas = _listar_todas_personas(cab, with_hidden=False)
+    except requests.RequestException as e:
+        return f"No se pudo consultar Immich: {e}"
+
+    sin_nombre = [p for p in personas if not p.get("name")]
+    if not sin_nombre:
+        return "No hay caras sin nombre en Immich."
+
+    resultado = []
+    for p in sin_nombre:
+        try:
+            n = _contar_fotos_persona(cab, p["id"])
+        except requests.RequestException:
+            continue
+        if n >= min_fotos:
+            resultado.append((p["id"], n))
+    resultado.sort(key=lambda x: -x[1])
+
+    if not resultado:
+        return f"No hay caras sin nombre con {min_fotos} o mas fotos (hay {len(sin_nombre)} sin nombre en total, todas por debajo de ese umbral)."
+
+    lineas = [f"{pid}: {n} fotos" for pid, n in resultado]
+    lineas.append("")
+    lineas.append(f"{len(resultado)} caras sin nombre con {min_fotos}+ fotos, de {len(sin_nombre)} sin nombre en total.")
+    return "\n".join(lineas)
+
+
+@mcp.tool()
+def fotos_por_lugar(lugar: str, anio: int | None = None) -> str:
+    """Cuenta cuantas fotos hay tomadas en un lugar (ciudad o pais, segun el
+    city/country del EXIF de cada foto en Immich), con desglose temporal.
+    Sin "anio": desglose por anio. Con "anio": limita el conteo a ese anio y
+    desglosa por mes. No devuelve rutas ni nombres de archivo, solo cifras.
+
+    Usa esta herramienta para preguntas tipo "cuantas fotos tengo de Madrid"
+    o "cuantas fotos de Paris hice en 2023". No sirve para ENCONTRAR o VER
+    esas fotos (para eso esta buscar_fotos o las herramientas immich_*),
+    solo para contarlas.
+
+    Args:
+        lugar: nombre de la ciudad o del pais tal como lo reconoce Immich en
+            el EXIF (por ejemplo "Madrid" o "France").
+        anio: si se indica, limita el conteo a ese anio y desglosa por mes
+            en vez de por anio.
+    """
+    cab = _cabecera()
+    if cab is None:
+        return "Falta la variable de entorno IMMICH_API_KEY."
+
+    try:
+        por_ciudad = _buscar_assets_immich(cab, {"city": lugar})
+        por_pais = _buscar_assets_immich(cab, {"country": lugar})
+    except requests.RequestException as e:
+        return f"No se pudo consultar Immich: {e}"
+
+    vistos = {a["id"]: a for a in por_ciudad + por_pais}
+    assets = list(vistos.values())
+
+    if anio is not None:
+        assets = [a for a in assets if (a.get("localDateTime") or "")[:4] == str(anio)]
+
+    if not assets:
+        contexto = f" en {anio}" if anio is not None else ""
+        return f"No hay fotos de '{lugar}'{contexto}."
+
+    desglose = {}
+    for a in assets:
+        fecha = a.get("localDateTime") or ""
+        clave = (fecha[:7] if anio is not None else fecha[:4]) or "sin fecha"
+        desglose[clave] = desglose.get(clave, 0) + 1
+
+    contexto = f" en {anio}" if anio is not None else ""
+    lineas = [f"{len(assets)} fotos de '{lugar}'{contexto}:"]
+    for clave in sorted(desglose):
+        lineas.append(f"- {clave}: {desglose[clave]}")
+    return "\n".join(lineas)
+
+
+@mcp.tool()
+def fotos_por_fecha(desde: str, hasta: str) -> str:
+    """Cuenta cuantas fotos hay tomadas en un rango de fechas, desglosado
+    por mes. No devuelve rutas ni nombres de archivo, solo cifras.
+
+    Usa esta herramienta para preguntas tipo "cuantas fotos tengo entre
+    marzo y julio de 2022". No sirve para ENCONTRAR o VER esas fotos (para
+    eso esta buscar_fotos o las herramientas immich_*), solo para contarlas.
+
+    Args:
+        desde: fecha de inicio del rango, formato YYYY-MM-DD (incluida).
+        hasta: fecha de fin del rango, formato YYYY-MM-DD (incluida).
+    """
+    cab = _cabecera()
+    if cab is None:
+        return "Falta la variable de entorno IMMICH_API_KEY."
+
+    try:
+        datetime.strptime(desde, "%Y-%m-%d")
+        datetime.strptime(hasta, "%Y-%m-%d")
+    except ValueError:
+        return "Formato de fecha invalido. Usa YYYY-MM-DD tanto en 'desde' como en 'hasta'."
+
+    try:
+        assets = _buscar_assets_immich(cab, {
+            "takenAfter": f"{desde}T00:00:00.000Z",
+            "takenBefore": f"{hasta}T23:59:59.999Z",
+        })
+    except requests.RequestException as e:
+        return f"No se pudo consultar Immich: {e}"
+
+    if not assets:
+        return f"No hay fotos entre {desde} y {hasta}."
+
+    desglose = {}
+    for a in assets:
+        fecha = a.get("localDateTime") or ""
+        clave = fecha[:7] or "sin fecha"
+        desglose[clave] = desglose.get(clave, 0) + 1
+
+    lineas = [f"{len(assets)} fotos entre {desde} y {hasta}:"]
+    for clave in sorted(desglose):
+        lineas.append(f"- {clave}: {desglose[clave]}")
+    return "\n".join(lineas)
+
+
 if __name__ == "__main__":
     mcp.run()

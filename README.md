@@ -244,7 +244,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `indexar_documentos.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
 | `mcp_documentos.py` | Servidor MCP: expone `buscar_en_documentos`, `listar_documentos_indexados`, `abrir_documento` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
-| `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos` y `listar_personas` (nombre y nº de fotos de cada persona identificada en Immich — filtra y cuenta en código para no mandarle al modelo el JSON completo de `/api/people`, mismo motivo que `contar_documentos`); genera una galería HTML con los resultados de las búsquedas. |
+| `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`, `listar_personas_sin_nombre`, `fotos_por_lugar` y `fotos_por_fecha` (las cuatro últimas filtran y cuentan en código en vez de mandarle al modelo el JSON crudo de Immich, mismo motivo que `contar_documentos` — parámetros y detalle de cada una, justo debajo); genera una galería HTML con los resultados de las búsquedas. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
 | `revisar.py` | Genera un HTML interactivo para revisar a ojo los duplicados y descargar la lista de lo que se confirma borrar. |
 | `limpiar.py` | Mueve a cuarentena los duplicados confirmados en `revision.html`. Nunca borra directamente; pide escribir "SI" para continuar. |
@@ -256,6 +256,20 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `salud.py` | Comprueba el estado de todo el stack (puertos mcpo, contenedores Docker, Ollama, LiteLLM, tareas programadas, ChromaDB, carpeta `consume`, disco externo, cuarentena de duplicados...) y genera `salud.html` con el resultado. Se ejecuta a mano con `salud.bat`, no tiene tarea programada. |
 
 `salud.html`, el informe que genera, se regenera en cada ejecución dentro de `scripts\` y no se versiona (está en `.gitignore`). **Es sensible**: enumera tareas programadas, contenedores Docker, versiones de modelos, espacio libre en disco y estado de la carpeta `consume` — un inventario bastante completo de tu instalación. No lo compartas ni lo subas a ningún sitio.
+
+### Tools de `mcp_fotos.py` (puerto 8003)
+
+Las tres últimas (`listar_personas_sin_nombre`, `fotos_por_lugar`, `fotos_por_fecha`) consultan la API de Immich directamente — sin LLM ni ChromaDB de por medio — y nunca devuelven rutas, nombres de archivo ni miniaturas, solo cifras e IDs.
+
+| Tool | Parámetros | Qué devuelve | Cuándo usarla |
+|---|---|---|---|
+| `buscar_fotos` | `consulta: str`, `maximo: int = 12` | Abre una galería HTML con las fotos más parecidas a la consulta (miniatura, ruta, distancia). | Buscar fotos por lo que aparece en ellas (personas, lugares, objetos, escenas). |
+| `buscar_videos` | `consulta: str`, `maximo: int = 12` | Igual que `buscar_fotos`, pero sobre vídeos. | Buscar vídeos por contenido. |
+| `estadisticas_fotos` | ninguno | Total indexado y desglose por carpeta y por año, para fotos y vídeos. | "Cuántas fotos/vídeos tengo indexados y de qué años." |
+| `listar_personas` | ninguno | Nombre y nº de fotos de cada persona **con nombre** en Immich. Sin IDs, miniaturas ni rutas. | "Qué personas tengo etiquetadas" / "cuántas fotos hay de X". |
+| `listar_personas_sin_nombre` | `min_fotos: int = 20` | ID y nº de fotos de cada cara **sin nombre** en Immich, de más a menos fotos. | Decidir qué caras sin identificar merece la pena nombrar o fusionar primero (ver «Fusionar personas duplicadas» en la sección 9). |
+| `fotos_por_lugar` | `lugar: str`, `anio: int \| None = None` | Conteo total de fotos de ese lugar (`city`/`country` del EXIF vía Immich), desglosado por año o, si se indica `anio`, por mes. | "Cuántas fotos tengo de Madrid" / "cuántas de París en 2023". |
+| `fotos_por_fecha` | `desde: str`, `hasta: str` (`YYYY-MM-DD`) | Conteo de fotos en el rango, desglosado por mes. | "Cuántas fotos tengo entre marzo y julio de 2022". |
 
 ## 6. Los prompts
 
