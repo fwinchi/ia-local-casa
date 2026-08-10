@@ -119,7 +119,42 @@ dos carpetas.
 
 ## 5. Base de datos de Immich
 
-*(pendiente de probar)*
+**Estado:** verificado el 10-08-2026.
+
+1. **Origen real**: dump de PostgreSQL en formato personalizado (`-Fc`) del contenedor
+   `immich_postgres`, 39 MB, en `%DESTINO_BASE%/immich-db/immich-db.dump` (mismas
+   variables que `backup-orangepi.bat`).
+2. **Verificación de formato**: los 5 primeros bytes del dump deben ser `PGDMP` —
+   confirma que es un dump `-Fc` válido antes de intentar restaurarlo con nada.
+3. **Copia a una carpeta temporal aislada**: `rsync` del dump desde el NAS, sin tocar el
+   original del backup.
+4. **Contenedor Postgres de prueba, con la MISMA imagen que el real**: obtenida con
+   ```
+   docker inspect immich_postgres --format "{{.Config.Image}}"
+   ```
+   y levantada aparte, en el puerto `5433` (ni `5432`, el real, ni ningún otro en uso).
+5. **Crear las extensiones ANTES de `pg_restore`** — si no, la restauración falla en
+   cuanto llega a un objeto que las necesita:
+   ```sql
+   CREATE EXTENSION vector;
+   CREATE EXTENSION vchord CASCADE;
+   CREATE EXTENSION cube;
+   CREATE EXTENSION earthdistance;
+   ```
+6. **Restaurar**:
+   ```
+   pg_restore -U postgres -d immich --no-owner --no-privileges
+   ```
+   `--no-owner --no-privileges` porque el contenedor de prueba no tiene los mismos roles
+   que el real — sin esas dos opciones, `pg_restore` falla intentando reasignar
+   propietarios y permisos que no existen ahí.
+7. **Verificar contando filas** en la copia restaurada contra la base de producción,
+   tabla por tabla.
+8. **Limpiar**: parar y borrar el contenedor de prueba y la carpeta temporal.
+
+**Resultado real de esta prueba (10-08-2026):** `pg_restore` sin errores. Conteos, copia
+restaurada vs. producción: `asset` 3298/3298, `person` 228/228, `person` con nombre
+asignado 10/10, `album` 0/0 — coincidencia exacta en las cuatro tablas.
 
 ## 6. Open WebUI
 
