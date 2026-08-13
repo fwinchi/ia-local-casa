@@ -335,6 +335,7 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 | `limpiar.py` | Mueve a cuarentena los duplicados confirmados en `revision.html`. Nunca borra directamente; pide escribir "SI" para continuar. |
 | `vigilante.py` | Vigila si el disco externo está conectado y si hay duplicados nuevos; solo abre `revision.html` cuando algo ha cambiado desde la última vez. |
 | `organizar_fotos.py` | Reordena las fotos del disco externo en carpetas `AAAA\MM-Mes` según la fecha EXIF (o el nombre del archivo como respaldo). Por defecto solo simula; hace falta `--aplicar`. |
+| `informe_fotos_semanal.ps1` | Ejecuta `organizar_fotos.py` en modo simulación, extrae de su informe solo la fecha, la cifra de «Ya en su sitio» / «A mover» y las 3 carpetas con más ficheros, y muestra un toast nativo de Windows si hay algo que mover (nunca lee la sección `### MOVIMIENTOS`, ni lanza toast si no hay nada que mover). |
 | `organizador.py` | Organiza la carpeta de Descargas por tipo de archivo (Imágenes, PDFs, Documentos, Instaladores...). |
 | `oculto.vbs` | Lanza el `.bat` que se le pase como argumento sin mostrar ventana. |
 | `backup-orangepi.bat` | Copia Paperless, ChromaDB, fotos, vídeos, las dos carpetas de documentos a indexar (`Documents` y OneDrive), la base de datos de Immich y el volumen de Open WebUI a un NAS/Orange Pi por red (`scp`/`rsync`/`pg_dump`/`docker run` vía WSL). Sin tarea programada propia; ver «Qué no resuelve este montaje» en la sección 9 para el detalle y las limitaciones. |
@@ -395,7 +396,7 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
   1. `vigilante.py`, **esperando** a que termine (comprueba si hay duplicados nuevos en el disco externo y abre `revision.html` solo si cambian).
   2. `indexar_fotos.py`, también **esperando**.
   3. `indexar_videos.py`, **sin esperar** — se lanza en segundo plano y la tarea programada se da por completada aunque el indexado de vídeos siga corriendo.
-- **`run-indexar.bat`**, **`run-organizador.bat`** — cada uno llama a su script Python correspondiente; se lanzan a través de `oculto.vbs` para no mostrar consola.
+- **`run-indexar.bat`**, **`run-organizador.bat`**, **`start-informe-fotos.bat`** — cada uno llama a su script correspondiente (Python o PowerShell); se lanzan a través de `oculto.vbs` para no mostrar consola.
 - **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
 - **`run-duplicados.bat`** — no tiene tarea programada propia. Es un lanzador manual para forzar una revisión de duplicados fuera del ciclo automático de `vigilante-duplicados` (que ya hace su propia comprobación llamando directamente a `revisar.py` desde `vigilante.py`).
 - **`salud.bat`** — tampoco tiene tarea programada. Es para ejecutar a mano cuando quieras un diagnóstico del stack; por eso, a diferencia de los demás `.bat`, termina con `pause` (para poder leer el resultado en la consola) y no pasa por `oculto.vbs`.
@@ -413,6 +414,7 @@ Creadas con `schtasks` desde PowerShell como Administrador:
 | `mcpo-paperless` | `oculto.vbs` + `start-mcpo.bat` | Al iniciar sesión |
 | `mcp-documentos` | `oculto.vbs` + `start-mcp-documentos.bat` | Al iniciar sesión |
 | `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | Al iniciar sesión |
+| `informe-fotos-semanal` | `oculto.vbs` + `start-informe-fotos.bat` | Semanal, domingos 22:00 |
 
 Se crean con `schtasks ... /ru <usuario> /rl limited /f` — se ejecutan como el usuario indicado, con privilegios normales, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
 

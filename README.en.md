@@ -335,6 +335,7 @@ They all live in `scripts\`. The launchers (`run-*.bat`, `run-*.vbs`, `start-mcp
 | `limpiar.py` | Moves confirmed duplicates from `revision.html` to quarantine. Never deletes directly; requires typing "SI" to continue. |
 | `vigilante.py` | Watches whether the external disk is connected and whether there are new duplicates; only opens `revision.html` when something has changed since last time. |
 | `organizar_fotos.py` | Reorders photos on the external disk into `AAAA\MM-Mes` folders based on EXIF date (or the filename as a fallback). Simulates only by default; needs `--aplicar`. |
+| `informe_fotos_semanal.ps1` | Runs `organizar_fotos.py` in simulation mode, extracts only the date, the "Ya en su sitio" / "A mover" count and the 3 folders with the most files from its report, and shows a native Windows toast if there's something to move (never reads the `### MOVIMIENTOS` section, and shows no toast if there's nothing to move). |
 | `organizador.py` | Organizes the Downloads folder by file type (Images, PDFs, Documents, Installers...). |
 | `oculto.vbs` | Launches whichever `.bat` is passed as an argument without showing a window. |
 | `backup-orangepi.bat` | Copies Paperless, ChromaDB, photos, videos, the two document folders to index (`Documents` and OneDrive), the Immich database and the Open WebUI volume to a NAS/Orange Pi over the network (`scp`/`rsync`/`pg_dump`/`docker run` via WSL). Has no scheduled task of its own; see "What this setup doesn't solve" in section 9 for details and limitations. |
@@ -395,7 +396,7 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
   1. `vigilante.py`, **waiting** for it to finish (checks whether there are new duplicates on the external disk and opens `revision.html` only if there are).
   2. `indexar_fotos.py`, also **waiting**.
   3. `indexar_videos.py`, **not waiting** — it's launched in the background and the scheduled task is marked complete even if video indexing is still running.
-- **`run-indexar.bat`**, **`run-organizador.bat`** — each calls its corresponding Python script; launched via `oculto.vbs` to avoid showing a console.
+- **`run-indexar.bat`**, **`run-organizador.bat`**, **`start-informe-fotos.bat`** — each calls its corresponding script (Python or PowerShell); launched via `oculto.vbs` to avoid showing a console.
 - **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcpo.bat`** — start each `mcpo` server (they keep running, they're not tasks that finish); also launched via `oculto.vbs`.
 - **`run-duplicados.bat`** — has no scheduled task of its own. It's a manual launcher to force a duplicate review outside the automatic `vigilante-duplicados` cycle (which already does its own check by calling `revisar.py` directly from `vigilante.py`).
 - **`salud.bat`** — also has no scheduled task. It's meant to be run by hand when you want a stack diagnosis; that's why, unlike the other `.bat` files, it ends with `pause` (so you can read the result in the console) and doesn't go through `oculto.vbs`.
@@ -413,6 +414,7 @@ Created with `schtasks` from PowerShell as Administrator:
 | `mcpo-paperless` | `oculto.vbs` + `start-mcpo.bat` | At logon |
 | `mcp-documentos` | `oculto.vbs` + `start-mcp-documentos.bat` | At logon |
 | `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | At logon |
+| `informe-fotos-semanal` | `oculto.vbs` + `start-informe-fotos.bat` | Weekly, Sundays at 22:00 |
 
 Created with `schtasks ... /ru <usuario> /rl limited /f` — they run as the given user, with normal privileges, and `/f` overwrites without asking if the task already existed (handy for re-running the same creation command without it failing on a duplicate).
 
