@@ -10,7 +10,7 @@ soportados. Dos circuitos, cada uno con sus propias constantes:
 - Fotos/vídeos (indexar_fotos.py, indexar_videos.py, mcp_fotos.py):
   OLLAMA_BASE (URL base de Ollama, sin ruta de endpoint — estos scripts
   la usan tanto para /api/generate como para /api/embeddings),
-  MODELO_VISION (vl-paperless), MODELO_EMBED_FOTOS (nomic-embed-text),
+  MODELO_VISION (vl3-paperless), MODELO_EMBED_FOTOS (nomic-embed-text),
   IMMICH_BASE_URL (solo mcp_fotos.py, para listar_personas).
 
 BASE y CARPETA_DB son comunes a los dos circuitos: mismo `chroma/`,
@@ -42,7 +42,7 @@ EXTENSIONES = [".pdf", ".docx", ".txt", ".odt"]
 
 # --- Fotos / vídeos ---
 OLLAMA_BASE = "http://localhost:11434"
-MODELO_VISION = "vl-paperless"
+MODELO_VISION = "vl3-paperless"
 MODELO_EMBED_FOTOS = "nomic-embed-text"
 
 # Immich corre en el host, igual que mcp_fotos.py (no es un contenedor desde

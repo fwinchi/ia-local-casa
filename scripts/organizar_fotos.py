@@ -30,6 +30,11 @@ LOG = SCRIPTS / "organizar_fotos.log"
 
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
 
+# Subcarpetas de primer nivel bajo la raiz que el recorrido ignora por
+# completo (no se cuentan, no aparecen en el informe). Se puede reordenar
+# ese subarbol aparte con --raiz, que desactiva esta exclusion.
+EXCLUIR = {"WhatsApp"}
+
 MESES = {
     "01": "01-Enero", "02": "02-Febrero", "03": "03-Marzo", "04": "04-Abril",
     "05": "05-Mayo", "06": "06-Junio", "07": "07-Julio", "08": "08-Agosto",
@@ -128,14 +133,31 @@ def carpeta_ya_organizada(p, raiz):
     return False
 
 
+def dentro_de_excluida(p, raiz):
+    """True si el primer nivel de carpeta de p bajo raiz esta en EXCLUIR."""
+    rel = p.relative_to(raiz).parts
+    return len(rel) > 1 and rel[0] in EXCLUIR
+
+
 def main():
     aplicar = "--aplicar" in sys.argv
-    d = letra_disco()
-    raiz = Path(f"{d}:\\") / CARPETA_FOTOS
+
+    if "--raiz" in sys.argv:
+        i = sys.argv.index("--raiz")
+        if i + 1 >= len(sys.argv):
+            raise SystemExit("--raiz necesita una ruta: --raiz <ruta>")
+        raiz = Path(sys.argv[i + 1])
+        excluir_activo = False   # --raiz permite ordenar precisamente el subarbol excluido
+    else:
+        d = letra_disco()
+        raiz = Path(f"{d}:\\") / CARPETA_FOTOS
+        excluir_activo = True
 
     fotos = [p for p in raiz.rglob("*")
              if p.is_file() and p.suffix.lower() in EXT_FOTO]
-    print(f"Disco {d}: | {len(fotos)} fotos")
+    if excluir_activo:
+        fotos = [p for p in fotos if not dentro_de_excluida(p, raiz)]
+    print(f"Raiz {raiz}: {len(fotos)} fotos")
 
     movimientos, ya_ok, resumen = [], 0, {}
     for i, p in enumerate(fotos, 1):
