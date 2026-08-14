@@ -1,8 +1,6 @@
 scripts/secrets.local.bat
 docker/**/.env
-aider/.aider.conf.yml.local
-.aider.conf.yml
-.aider.conf.yml.local
+.aider*
 .env.aider.local
 
 # Documento interno de trabajo, no se publica
@@ -20,6 +18,7 @@ cuarentena_duplicados/
 scripts/*.html
 scripts/*.txt
 scripts/*.json
+*.db
 
 # Bundle de auditoría para revisión externa, no se versiona
 auditoria.txt
