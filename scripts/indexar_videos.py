@@ -1,7 +1,7 @@
 """
 Indexa los videos del disco externo en ChromaDB:
   1. ffmpeg extrae 3 fotogramas repartidos por el video
-  2. vl-paperless describe cada fotograma
+  2. vl3-paperless describe cada fotograma
   3. Se resume en una descripcion unica y se vectoriza con nomic-embed-text
   4. Se guarda en ChromaDB con ruta, duracion, resolucion y fecha
 
@@ -9,9 +9,11 @@ Es incremental. NO modifica ni mueve ningun archivo.
 """
 import base64
 import json
+import msvcrt
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +37,10 @@ FOTOGRAMAS = 3
 ANCHO_MAX = 896
 LOG = SCRIPTS / "indexar_videos.log"
 
+# Lock de instancia unica, en la misma carpeta donde el script guarda sus
+# datos (CARPETA_DB de config_rutas.py, el chroma/ compartido).
+LOCK = Path(CHROMA_PATH) / "indexar_videos.lock"
+
 EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp", ".webm"}
 
 PROMPT = """Describe este fotograma de un video en espanol, en 1 o 2 frases.
@@ -53,6 +59,39 @@ def log(msg):
     print(linea)
     with open(LOG, "a", encoding="utf-8") as f:
         f.write(linea + "\n")
+
+
+def adquirir_lock():
+    """Lock de instancia unica via msvcrt.locking sobre un fichero abierto,
+    no por comprobacion de existencia: si el proceso anterior crasheo,
+    Windows libera el lock del descriptor solo, sin dejar candados
+    huerfanos que haya que borrar a mano.
+
+    Devuelve el file object con el lock activo, o None si ya hay otra
+    instancia corriendo.
+    """
+    f = open(LOCK, "a+b")
+    try:
+        if f.tell() == 0:
+            f.write(b"0")
+            f.flush()
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+def liberar_lock(f):
+    if f is None:
+        return
+    try:
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
+    f.close()
 
 
 def letra_disco():
@@ -181,4 +220,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    lock_f = adquirir_lock()
+    if lock_f is None:
+        log("Ya hay otra instancia de indexar_videos.py corriendo. Saliendo sin hacer nada.")
+        sys.exit(0)
+    try:
+        main()
+    finally:
+        liberar_lock(lock_f)

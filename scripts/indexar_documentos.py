@@ -6,6 +6,8 @@ Ejecutar cada vez que anadas documentos nuevos: solo procesa los que faltan.
 
 import hashlib
 import json
+import msvcrt
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +24,46 @@ from config_rutas import BASE, CARPETAS_PDFS, CARPETA_DB, OLLAMA, MODELO, EXTENS
 
 TAM_TROZO = 1200      # caracteres por fragmento
 SOLAPE = 200          # solape entre fragmentos
+
+# Lock de instancia unica, en la misma carpeta donde el script guarda sus
+# datos (CARPETA_DB de config_rutas.py, el chroma/ compartido). Este script
+# no tiene log() propio (usa print(); run-indexar.bat ya redirige toda la
+# salida a indexar.log), asi que el aviso de instancia duplicada tambien va
+# por print(), no por una funcion de log nueva.
+LOCK = Path(CARPETA_DB) / "indexar_documentos.lock"
+
+
+def adquirir_lock():
+    """Lock de instancia unica via msvcrt.locking sobre un fichero abierto,
+    no por comprobacion de existencia: si el proceso anterior crasheo,
+    Windows libera el lock del descriptor solo, sin dejar candados
+    huerfanos que haya que borrar a mano.
+
+    Devuelve el file object con el lock activo, o None si ya hay otra
+    instancia corriendo.
+    """
+    f = open(LOCK, "a+b")
+    try:
+        if f.tell() == 0:
+            f.write(b"0")
+            f.flush()
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+def liberar_lock(f):
+    if f is None:
+        return
+    try:
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
+    f.close()
 
 
 def embedding(texto):
@@ -223,4 +265,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    lock_f = adquirir_lock()
+    if lock_f is None:
+        print("Ya hay otra instancia de indexar_documentos.py corriendo. Saliendo sin hacer nada.")
+        sys.exit(0)
+    try:
+        main()
+    finally:
+        liberar_lock(lock_f)
