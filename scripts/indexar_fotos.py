@@ -1,6 +1,6 @@
 """
 Indexa las fotos del disco externo en ChromaDB:
-  1. vl-paperless (vision) describe cada foto en espanol
+  1. vl3-paperless (vision) describe cada foto en espanol
   2. nomic-embed-text vectoriza la descripcion
   3. Se guarda en ChromaDB con ruta, fecha EXIF y carpeta
 
@@ -10,6 +10,7 @@ NO modifica ni mueve ningun archivo.
 import base64
 import io
 import json
+import msvcrt
 import subprocess
 import sys
 from datetime import datetime
@@ -41,6 +42,10 @@ COLECCION = "fotos"
 LADO_MAX = 896          # se reescala antes de mandar al modelo (mas rapido)
 LOG = SCRIPTS / "indexar_fotos.log"
 
+# Lock de instancia unica, en la misma carpeta donde el script guarda sus
+# datos (CARPETA_DB de config_rutas.py, el chroma/ compartido).
+LOCK = Path(CHROMA_PATH) / "indexar_fotos.lock"
+
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff"}
 
 PROMPT = """Describe esta fotografia en espanol, en 2 o 3 frases.
@@ -55,6 +60,39 @@ def log(msg):
     print(linea)
     with open(LOG, "a", encoding="utf-8") as f:
         f.write(linea + "\n")
+
+
+def adquirir_lock():
+    """Lock de instancia unica via msvcrt.locking sobre un fichero abierto,
+    no por comprobacion de existencia: si el proceso anterior crasheo,
+    Windows libera el lock del descriptor solo, sin dejar candados
+    huerfanos que haya que borrar a mano.
+
+    Devuelve el file object con el lock activo, o None si ya hay otra
+    instancia corriendo.
+    """
+    f = open(LOCK, "a+b")
+    try:
+        if f.tell() == 0:
+            f.write(b"0")
+            f.flush()
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+def liberar_lock(f):
+    if f is None:
+        return
+    try:
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    except OSError:
+        pass
+    f.close()
 
 
 def letra_disco():
@@ -168,4 +206,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    lock_f = adquirir_lock()
+    if lock_f is None:
+        log("Ya hay otra instancia de indexar_fotos.py corriendo. Saliendo sin hacer nada.")
+        sys.exit(0)
+    try:
+        main()
+    finally:
+        liberar_lock(lock_f)
