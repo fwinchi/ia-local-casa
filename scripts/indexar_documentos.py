@@ -94,6 +94,15 @@ def trocear(texto):
 def texto_de_pdf(ruta):
     try:
         lector = PdfReader(str(ruta))
+        if lector.is_encrypted:
+            try:
+                resultado = lector.decrypt("")
+                if not resultado:
+                    print(f"  ERROR descifrando {ruta.resolve()}: contraseña vacía no válida")
+                    return []
+            except Exception as e:
+                print(f"  ERROR descifrando {ruta.resolve()}: {e}")
+                return []
         paginas = []
         for i, pagina in enumerate(lector.pages):
             t = pagina.extract_text() or ""
@@ -101,7 +110,7 @@ def texto_de_pdf(ruta):
                 paginas.append((i + 1, t))
         return paginas
     except Exception as e:
-        print(f"  ERROR leyendo: {e}")
+        print(f"  ERROR leyendo {ruta.resolve()}: {e}")
         return []
 
 
@@ -113,7 +122,7 @@ def texto_de_docx(ruta):
         texto = "\n".join(p.text for p in documento.paragraphs)
         return [(1, texto)] if texto.strip() else []
     except Exception as e:
-        print(f"  ERROR leyendo: {e}")
+        print(f"  ERROR leyendo {ruta.resolve()}: {e}")
         return []
 
 
@@ -126,7 +135,7 @@ def texto_de_txt(ruta):
             texto = ruta.read_text(encoding="cp1252", errors="replace")
         return [(1, texto)] if texto.strip() else []
     except Exception as e:
-        print(f"  ERROR leyendo: {e}")
+        print(f"  ERROR leyendo {ruta.resolve()}: {e}")
         return []
 
 
@@ -138,7 +147,7 @@ def texto_de_odt(ruta):
         texto = "\n".join(teletype.extractText(p) for p in parrafos)
         return [(1, texto)] if texto.strip() else []
     except Exception as e:
-        print(f"  ERROR leyendo: {e}")
+        print(f"  ERROR leyendo {ruta.resolve()}: {e}")
         return []
 
 
@@ -219,7 +228,7 @@ def main():
             continue
 
         tipo = ruta.suffix.lower().lstrip(".")
-        print(f"Indexando: {ruta.name}")
+        print(f"Indexando: {ruta.resolve()}")
 
         extractor = EXTRACTORES[ruta.suffix.lower()]
         paginas = extractor(ruta)
