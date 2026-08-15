@@ -54,9 +54,9 @@ if errorlevel 1 (
 
 REM 3. Copiar Paperless (+ el volcado de Open WebUI de arriba) al destino
 REM    (volcado completo, no incremental)
-scp -r -q "D:\paperless\export" %USUARIO%@%IP%:%DESTINO_BASE%/paperless/
+wsl bash -c "rsync -a '/mnt/d/paperless/export/' '%USUARIO%@%IP%:%DESTINO_BASE%/paperless/'"
 if errorlevel 1 (
-    echo ERROR: fallo el scp de Paperless
+    echo ERROR: fallo el rsync de Paperless
     exit /b 1
 )
 
