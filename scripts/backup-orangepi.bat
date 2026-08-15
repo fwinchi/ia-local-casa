@@ -113,7 +113,24 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 9. Base de datos de Immich: pg_dump dentro de su propio contenedor
+REM 9. Open WebUI de escritorio: carpeta de datos de la app instalada en
+REM    Windows (distinta del volumen Docker del paso 2, que es otro Open
+REM    WebUI). Sin --delete, mismo criterio que fotos/videos/documentos.
+REM    config.json vive junto a data/, no dentro, por eso va en un rsync
+REM    aparte. Mismo motivo de "bash -c" con comillas simples que los pasos
+REM    7 y 8 (consistencia, aunque aqui la ruta no tenga espacios).
+wsl bash -c "rsync -a '/mnt/c/Users/%USUARIO_WINDOWS%/AppData/Roaming/open-webui/data/' '%USUARIO%@%IP%:%DESTINO_BASE%/openwebui/data/'"
+if errorlevel 1 (
+    echo ERROR: fallo el rsync de datos de Open WebUI escritorio
+    exit /b 1
+)
+wsl bash -c "rsync -a '/mnt/c/Users/%USUARIO_WINDOWS%/AppData/Roaming/open-webui/config.json' '%USUARIO%@%IP%:%DESTINO_BASE%/openwebui/'"
+if errorlevel 1 (
+    echo ERROR: fallo el rsync de config.json de Open WebUI escritorio
+    exit /b 1
+)
+
+REM 10. Base de datos de Immich: pg_dump dentro de su propio contenedor
 REM    Postgres (immich_postgres), igual que el export de Paperless usa
 REM    su propio contenedor. -Fc (formato personalizado) en vez de SQL
 REM    plano: se restaura con pg_restore, no con psql. Las extensiones de
@@ -140,7 +157,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 10. Marcar como hecho hoy - solo si los nueve pasos anteriores salieron bien
+REM 11. Marcar como hecho hoy - solo si los diez pasos anteriores salieron bien
 >"%MARCA%" echo %HOY%
 echo [%date% %time%] Backup completado
 
