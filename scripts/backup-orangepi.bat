@@ -62,7 +62,7 @@ if errorlevel 1 (
 
 REM 4. ChromaDB: espejo exacto con --delete. Es un indice reconstruible,
 REM    interesa que el destino refleje exactamente lo que hay hoy.
-wsl rsync -a --delete /mnt/d/paperless/chroma/ %USUARIO%@%IP%:%DESTINO_BASE%/chroma/
+wsl rsync -a --delete --exclude=*.lock /mnt/d/paperless/chroma/ %USUARIO%@%IP%:%DESTINO_BASE%/chroma/
 if errorlevel 1 (
     echo ERROR: fallo el rsync de ChromaDB
     exit /b 1
