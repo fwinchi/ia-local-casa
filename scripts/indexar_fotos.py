@@ -140,13 +140,15 @@ def _post_ollama(url, payload, timeout):
             r.raise_for_status()
             return r.json()
         except (ConnectionResetError, requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout):
+                requests.exceptions.Timeout) as e:
             if intento == 2:
                 raise
+            log(f"  Reintento Ollama ({intento + 1}/3) tras {type(e).__name__}: {e}. Espero {esperas[intento]}s.")
             time.sleep(esperas[intento])
         except requests.exceptions.HTTPError as e:
             if e.response is None or e.response.status_code < 500 or intento == 2:
                 raise
+            log(f"  Reintento Ollama ({intento + 1}/3) tras HTTP {e.response.status_code}. Espero {esperas[intento]}s.")
             time.sleep(esperas[intento])
 
 
