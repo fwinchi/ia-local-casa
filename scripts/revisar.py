@@ -15,6 +15,8 @@ from pathlib import Path
 from PIL import Image
 import imagehash
 
+Image.MAX_IMAGE_PIXELS = 300_000_000  # limite explicito de PIL contra "bombas de descompresion"
+
 try:
     from pillow_heif import register_heif_opener
     register_heif_opener()
@@ -189,11 +191,24 @@ def main():
             partes.append('<p class="vacio">Ninguno.</p>')
             continue
         for n, g in enumerate(grupos, 1):
-            rutas = [p for p, _ in g]
+            vivos = []
+            for p, dist in g:
+                if p.exists():
+                    vivos.append((p, dist))
+                else:
+                    print(f"  AVISO: ya no existe, se omite del grupo: {p}")
+            if len(vivos) < 2:
+                continue  # el grupo dejó de ser un duplicado real
+
+            rutas = [p for p, _ in vivos]
             keep = mejor(rutas, es_foto)
-            cards = "".join(
-                tarjeta(p, es_foto, p == keep, dist) for p, dist in g
-            )
+            cards_list = []
+            for p, dist in vivos:
+                try:
+                    cards_list.append(tarjeta(p, es_foto, p == keep, dist))
+                except Exception as e:
+                    print(f"  ERROR generando tarjeta de {p}: {e}")
+            cards = "".join(cards_list)
             total_borrar += len(rutas) - 1
             partes.append(f'<div class="grupo"><h3>Grupo {n}</h3><div class="fila">{cards}</div></div>')
 
