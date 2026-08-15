@@ -13,6 +13,7 @@ import json
 import msvcrt
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -127,10 +128,32 @@ def imagen_b64(ruta):
         return base64.b64encode(buf.getvalue()).decode()
 
 
+def _post_ollama(url, payload, timeout):
+    """POST a Ollama con reintentos y backoff exponencial: mismo patron que
+    embedding() en indexar_documentos.py (3 intentos, esperas de 2 y 4
+    segundos). Reintenta ante fallos de conexion, timeout y errores 5xx del
+    servidor; un error 4xx (peticion invalida) se propaga de inmediato."""
+    esperas = (2, 4)
+    for intento in range(3):
+        try:
+            r = requests.post(url, json=payload, timeout=timeout)
+            r.raise_for_status()
+            return r.json()
+        except (ConnectionResetError, requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout):
+            if intento == 2:
+                raise
+            time.sleep(esperas[intento])
+        except requests.exceptions.HTTPError as e:
+            if e.response is None or e.response.status_code < 500 or intento == 2:
+                raise
+            time.sleep(esperas[intento])
+
+
 def describir(ruta):
-    r = requests.post(
+    datos = _post_ollama(
         f"{OLLAMA}/api/generate",
-        json={
+        {
             "model": MODELO_VISION,
             "prompt": PROMPT,
             "images": [imagen_b64(ruta)],
@@ -139,18 +162,16 @@ def describir(ruta):
         },
         timeout=300,
     )
-    r.raise_for_status()
-    return r.json()["response"].strip()
+    return datos["response"].strip()
 
 
 def embed(texto):
-    r = requests.post(
+    datos = _post_ollama(
         f"{OLLAMA}/api/embeddings",
-        json={"model": MODELO_EMBED, "prompt": f"search_document: {texto}"},
+        {"model": MODELO_EMBED, "prompt": f"search_document: {texto}"},
         timeout=120,
     )
-    r.raise_for_status()
-    return r.json()["embedding"]
+    return datos["embedding"]
 
 
 def main():
