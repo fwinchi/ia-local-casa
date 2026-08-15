@@ -26,7 +26,13 @@ def norm(s):
 def get_all(endpoint):
     items, url = [], f"{PAPERLESS_URL}/api/{endpoint}/?page_size=200"
     while url:
-        r = requests.get(url, headers=H).json()
+        resp = requests.get(url, headers=H)
+        resp.raise_for_status()
+        r = resp.json()
+        if "results" not in r:
+            raise RuntimeError(
+                f"Respuesta sin 'results' (status {resp.status_code}) al consultar {url}"
+            )
         items += r["results"]
         url = r["next"]
     return items
