@@ -7,11 +7,15 @@ NO BORRA NADA. Genera informe + JSON para el paso de borrado posterior.
 import hashlib
 import json
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
 import imagehash
+
+from config_rutas import CARPETA_DB
+from utils_lock import adquirir_lock, liberar_lock
 
 try:
     from pillow_heif import register_heif_opener
@@ -27,6 +31,10 @@ CARPETA_FOTOS = "FOTOS"
 CARPETA_VIDEOS = "VIDEOS"
 UMBRAL_PHASH = 5          # 0 = identicas; 5 = casi identicas; >10 empieza a dar falsos positivos
 SALIDA = SCRIPTS
+
+# Lock de instancia unica, en la misma carpeta que usan indexar_fotos.py /
+# indexar_videos.py (CARPETA_DB de config_rutas.py, el chroma/ compartido).
+LOCK = Path(CARPETA_DB) / "duplicados.lock"
 
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
 EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp"}
@@ -198,4 +206,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    lock_f = adquirir_lock(LOCK)
+    if lock_f is None:
+        print("Ya hay otra instancia de duplicados.py corriendo. Saliendo sin hacer nada.")
+        sys.exit(0)
+    try:
+        main()
+    finally:
+        liberar_lock(lock_f)

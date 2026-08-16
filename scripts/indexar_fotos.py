@@ -10,7 +10,6 @@ NO modifica ni mueve ningun archivo.
 import base64
 import io
 import json
-import msvcrt
 import subprocess
 import sys
 import time
@@ -27,6 +26,7 @@ from config_rutas import (
     MODELO_VISION,
     MODELO_EMBED_FOTOS as MODELO_EMBED,
 )
+from utils_lock import adquirir_lock, liberar_lock
 
 try:
     from pillow_heif import register_heif_opener
@@ -45,6 +45,8 @@ LOG = SCRIPTS / "indexar_fotos.log"
 
 # Lock de instancia unica, en la misma carpeta donde el script guarda sus
 # datos (CARPETA_DB de config_rutas.py, el chroma/ compartido).
+# adquirir_lock()/liberar_lock() viven en utils_lock.py, compartidas con
+# indexar_documentos.py.
 LOCK = Path(CHROMA_PATH) / "indexar_fotos.lock"
 
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff"}
@@ -61,39 +63,6 @@ def log(msg):
     print(linea)
     with open(LOG, "a", encoding="utf-8") as f:
         f.write(linea + "\n")
-
-
-def adquirir_lock():
-    """Lock de instancia unica via msvcrt.locking sobre un fichero abierto,
-    no por comprobacion de existencia: si el proceso anterior crasheo,
-    Windows libera el lock del descriptor solo, sin dejar candados
-    huerfanos que haya que borrar a mano.
-
-    Devuelve el file object con el lock activo, o None si ya hay otra
-    instancia corriendo.
-    """
-    f = open(LOCK, "a+b")
-    try:
-        if f.tell() == 0:
-            f.write(b"0")
-            f.flush()
-        f.seek(0)
-        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-    except OSError:
-        f.close()
-        return None
-    return f
-
-
-def liberar_lock(f):
-    if f is None:
-        return
-    try:
-        f.seek(0)
-        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
-    except OSError:
-        pass
-    f.close()
 
 
 def letra_disco():
@@ -229,7 +198,7 @@ def main():
 
 
 if __name__ == "__main__":
-    lock_f = adquirir_lock()
+    lock_f = adquirir_lock(LOCK)
     if lock_f is None:
         log("Ya hay otra instancia de indexar_fotos.py corriendo. Saliendo sin hacer nada.")
         sys.exit(0)

@@ -8,12 +8,16 @@ import hashlib
 import io
 import json
 import subprocess
+import sys
 from datetime import datetime
 from html import escape
 from pathlib import Path
 
 from PIL import Image
 import imagehash
+
+from config_rutas import CARPETA_DB
+from utils_lock import adquirir_lock, liberar_lock
 
 Image.MAX_IMAGE_PIXELS = 300_000_000  # limite explicito de PIL contra "bombas de descompresion"
 
@@ -31,6 +35,10 @@ CARPETA_VIDEOS = "VIDEOS"
 UMBRAL_PHASH = 5
 SALIDA = SCRIPTS
 MINIATURA = 260
+
+# Lock de instancia unica, en la misma carpeta que usan indexar_fotos.py /
+# indexar_videos.py (CARPETA_DB de config_rutas.py, el chroma/ compartido).
+LOCK = Path(CARPETA_DB) / "revisar.lock"
 
 EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
 EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp"}
@@ -276,4 +284,11 @@ actualizar();
 
 
 if __name__ == "__main__":
-    main()
+    lock_f = adquirir_lock(LOCK)
+    if lock_f is None:
+        print("Ya hay otra instancia de revisar.py corriendo. Saliendo sin hacer nada.")
+        sys.exit(0)
+    try:
+        main()
+    finally:
+        liberar_lock(lock_f)
