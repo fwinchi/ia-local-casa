@@ -26,7 +26,12 @@ def norm(s):
 def get_all(endpoint):
     items, url = [], f"{PAPERLESS_URL}/api/{endpoint}/?page_size=200"
     while url:
-        resp = requests.get(url, headers=H)
+        try:
+            resp = requests.get(url, headers=H)
+        except requests.exceptions.ConnectionError:
+            raise SystemExit(
+                f"AVISO: Paperless no responde en {PAPERLESS_URL} - se reintentará en la próxima ejecución"
+            )
         resp.raise_for_status()
         r = resp.json()
         if "results" not in r:
