@@ -14,7 +14,7 @@
 mcpo==0.0.20
 
 # SDK de MCP: FastMCP, usado por mcp_documentos.py y mcp_fotos.py
-mcp==1.28.1
+mcp>=1.28.1,<2
 
 # ChromaDB: base semántica de documentos y de fotos/vídeos
 chromadb==1.5.9
