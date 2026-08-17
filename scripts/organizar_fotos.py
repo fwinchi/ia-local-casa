@@ -123,16 +123,6 @@ def nombre_libre(ruta):
         n += 1
 
 
-def carpeta_ya_organizada(p, raiz):
-    """True si la foto ya esta en AAAA\\MM-Mes o en Sin fecha."""
-    rel = p.parent.relative_to(raiz).parts
-    if rel == (SIN_FECHA,):
-        return True
-    if len(rel) == 2 and rel[0].isdigit() and rel[1] in MESES.values():
-        return True
-    return False
-
-
 def dentro_de_excluida(p, raiz):
     """True si el primer nivel de carpeta de p bajo raiz esta en EXCLUIR."""
     rel = p.relative_to(raiz).parts
