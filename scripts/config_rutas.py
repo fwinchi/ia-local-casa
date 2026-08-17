@@ -48,3 +48,16 @@ MODELO_EMBED_FOTOS = "nomic-embed-text"
 # Immich corre en el host, igual que mcp_fotos.py (no es un contenedor desde
 # el punto de vista de este script), asi que localhost va bien.
 IMMICH_BASE_URL = "http://localhost:2283"
+
+# --- Disco externo ---
+ETIQUETA_DISCO = "Multimedia IA"
+
+# --- Extensiones multimedia ---
+# .gif excluido a proposito (decision del usuario).
+EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff"}
+EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp", ".webm"}
+
+# Subconjunto para el buzon de Syncthing (ingesta_fotos.py): solo formatos
+# que genera un movil. Se excluyen .wmv/.mpg/.mpeg a proposito -- son
+# formatos heredados de PC que no deben entrar por esa via.
+EXT_VIDEO_MOVIL = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}

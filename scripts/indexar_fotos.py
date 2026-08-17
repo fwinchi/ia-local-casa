@@ -10,7 +10,6 @@ NO modifica ni mueve ningun archivo.
 import base64
 import io
 import json
-import subprocess
 import sys
 import time
 from datetime import datetime
@@ -25,7 +24,9 @@ from config_rutas import (
     OLLAMA_BASE as OLLAMA,
     MODELO_VISION,
     MODELO_EMBED_FOTOS as MODELO_EMBED,
+    EXT_FOTO,
 )
+from utils_comun import letra_disco, log
 from utils_lock import adquirir_lock, liberar_lock
 
 try:
@@ -37,7 +38,6 @@ except Exception:
 # --- Configuracion ---
 SCRIPTS = Path(__file__).resolve().parent         # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 COLECCION = "fotos"
 LADO_MAX = 896          # se reescala antes de mandar al modelo (mas rapido)
@@ -49,30 +49,11 @@ LOG = SCRIPTS / "indexar_fotos.log"
 # indexar_documentos.py.
 LOCK = Path(CHROMA_PATH) / "indexar_fotos.lock"
 
-EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff"}
-
 PROMPT = """Describe esta fotografia en espanol, en 2 o 3 frases.
 Incluye: que o quien aparece, el lugar o tipo de escena (playa, montana, interior,
 ciudad, restaurante, celebracion...), objetos destacados, y si hay texto visible
 transcribelo. Se concreto y factual. No inventes nombres de personas ni lugares.
 Responde solo con la descripcion, sin preambulos."""
-
-
-def log(msg):
-    linea = f"{datetime.now():%Y-%m-%d %H:%M} | {msg}"
-    print(linea)
-    with open(LOG, "a", encoding="utf-8") as f:
-        f.write(linea + "\n")
-
-
-def letra_disco():
-    ps = f'(Get-Volume | Where-Object FileSystemLabel -eq "{ETIQUETA_DISCO}").DriveLetter'
-    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                       capture_output=True, text=True)
-    letra = r.stdout.strip()
-    if not letra:
-        raise SystemExit(f"Disco '{ETIQUETA_DISCO}' no conectado.")
-    return letra
 
 
 def fecha_exif(ruta):
@@ -112,12 +93,12 @@ def _post_ollama(url, payload, timeout):
                 requests.exceptions.Timeout) as e:
             if intento == 2:
                 raise
-            log(f"  Reintento Ollama ({intento + 1}/3) tras {type(e).__name__}: {e}. Espero {esperas[intento]}s.")
+            log(f"  Reintento Ollama ({intento + 1}/3) tras {type(e).__name__}: {e}. Espero {esperas[intento]}s.", LOG)
             time.sleep(esperas[intento])
         except requests.exceptions.HTTPError as e:
             if e.response is None or e.response.status_code < 500 or intento == 2:
                 raise
-            log(f"  Reintento Ollama ({intento + 1}/3) tras HTTP {e.response.status_code}. Espero {esperas[intento]}s.")
+            log(f"  Reintento Ollama ({intento + 1}/3) tras HTTP {e.response.status_code}. Espero {esperas[intento]}s.", LOG)
             time.sleep(esperas[intento])
 
 
@@ -150,7 +131,7 @@ def main():
     raiz = Path(f"{d}:\\") / CARPETA_FOTOS
     fotos = sorted(p for p in raiz.rglob("*")
                    if p.is_file() and p.suffix.lower() in EXT_FOTO)
-    log(f"Disco {d}: | {len(fotos)} fotos encontradas")
+    log(f"Disco {d}: | {len(fotos)} fotos encontradas", LOG)
 
     cliente = chromadb.PersistentClient(path=CHROMA_PATH)
     col = cliente.get_or_create_collection(
@@ -158,7 +139,7 @@ def main():
     )
 
     ya = set(col.get(include=[])["ids"])
-    log(f"Ya indexadas: {len(ya)}")
+    log(f"Ya indexadas: {len(ya)}", LOG)
 
     nuevas, errores = 0, 0
     for i, p in enumerate(fotos, 1):
@@ -181,10 +162,10 @@ def main():
                 }],
             )
             nuevas += 1
-            log(f"[{i}/{len(fotos)}] {p.name} -> {desc[:70]}...")
+            log(f"[{i}/{len(fotos)}] {p.name} -> {desc[:70]}...", LOG)
         except Exception as e:
             errores += 1
-            log(f"[{i}/{len(fotos)}] ERROR {p.name}: {e}")
+            log(f"[{i}/{len(fotos)}] ERROR {p.name}: {e}", LOG)
 
     # Purga entradas cuyas fotos ya no existen (movidas o borradas)
     datos = col.get(include=["metadatas"])
@@ -192,15 +173,15 @@ def main():
                  if not Path(m.get("ruta", "")).exists()]
     if huerfanas:
         col.delete(ids=huerfanas)
-        log(f"Purgadas {len(huerfanas)} entradas obsoletas")
+        log(f"Purgadas {len(huerfanas)} entradas obsoletas", LOG)
 
-    log(f"TERMINADO. Nuevas: {nuevas} | Errores: {errores} | Total: {col.count()}")
+    log(f"TERMINADO. Nuevas: {nuevas} | Errores: {errores} | Total: {col.count()}", LOG)
 
 
 if __name__ == "__main__":
     lock_f = adquirir_lock(LOCK)
     if lock_f is None:
-        log("Ya hay otra instancia de indexar_fotos.py corriendo. Saliendo sin hacer nada.")
+        log("Ya hay otra instancia de indexar_fotos.py corriendo. Saliendo sin hacer nada.", LOG)
         sys.exit(0)
     try:
         main()

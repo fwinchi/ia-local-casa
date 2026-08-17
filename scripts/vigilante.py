@@ -9,21 +9,17 @@ import os
 import re
 import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
-ETIQUETA_DISCO = "Multimedia IA"
+from config_rutas import ETIQUETA_DISCO
+from utils_comun import log
+
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 PYTHON = str(Path.home() / "AppData/Local/Python/bin/python.exe")
 REVISAR = SCRIPTS / "revisar.py"
 HTML = SCRIPTS / "revision.html"
 ESTADO = SCRIPTS / ".estado_duplicados"
 LOG = SCRIPTS / "vigilante.log"
-
-
-def log(msg):
-    with open(LOG, "a", encoding="utf-8") as f:
-        f.write(f"{datetime.now():%Y-%m-%d %H:%M} | {msg}\n")
 
 
 def disco_conectado():
@@ -51,7 +47,7 @@ def main():
     if not disco_conectado():
         if ESTADO.exists():
             ESTADO.unlink()
-            log("Disco desconectado. Estado reiniciado.")
+            log("Disco desconectado. Estado reiniciado.", LOG, consola=False)
         return
 
     r = subprocess.run(
@@ -60,22 +56,22 @@ def main():
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
     if r.returncode != 0:
-        log(f"ERROR en revisar.py: {r.stderr.strip()[:300]}")
+        log(f"ERROR en revisar.py: {r.stderr.strip()[:300]}", LOG, consola=False)
         return
 
     firma = firma_html()
     if firma in (None, "vacio"):
-        log("Sin duplicados.")
+        log("Sin duplicados.", LOG, consola=False)
         ESTADO.write_text("vacio", encoding="utf-8")
         return
 
     anterior = ESTADO.read_text(encoding="utf-8").strip() if ESTADO.exists() else ""
     if firma == anterior:
-        log("Sin cambios. No se abre el HTML.")
+        log("Sin cambios. No se abre el HTML.", LOG, consola=False)
         return
 
     ESTADO.write_text(firma, encoding="utf-8")
-    log("Duplicados nuevos. Abriendo revision.html")
+    log("Duplicados nuevos. Abriendo revision.html", LOG, consola=False)
     os.startfile(str(HTML))
 
 
@@ -83,5 +79,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        log(f"EXCEPCION: {e}")
+        log(f"EXCEPCION: {e}", LOG, consola=False)
         sys.exit(1)

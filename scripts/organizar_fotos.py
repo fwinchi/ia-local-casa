@@ -10,9 +10,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 import shutil
-import subprocess
 
 from PIL import Image, ExifTags
+
+from config_rutas import EXT_FOTO
+from utils_comun import letra_disco
 
 try:
     from pillow_heif import register_heif_opener
@@ -22,13 +24,10 @@ except Exception:
 
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 SIN_FECHA = "Sin fecha"
 INFORME = SCRIPTS / "organizacion_fotos.txt"
 LOG = SCRIPTS / "organizar_fotos.log"
-
-EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
 
 # Subcarpetas de primer nivel bajo la raiz que el recorrido ignora por
 # completo (no se cuentan, no aparecen en el informe). Se puede reordenar
@@ -40,16 +39,6 @@ MESES = {
     "05": "05-Mayo", "06": "06-Junio", "07": "07-Julio", "08": "08-Agosto",
     "09": "09-Septiembre", "10": "10-Octubre", "11": "11-Noviembre", "12": "12-Diciembre",
 }
-
-
-def letra_disco():
-    ps = f'(Get-Volume | Where-Object FileSystemLabel -eq "{ETIQUETA_DISCO}").DriveLetter'
-    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                       capture_output=True, text=True)
-    letra = r.stdout.strip()
-    if not letra:
-        raise SystemExit(f"Disco '{ETIQUETA_DISCO}' no conectado.")
-    return letra
 
 
 def fecha_exif(ruta):

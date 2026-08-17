@@ -6,7 +6,6 @@ NO BORRA NADA. Genera informe + JSON para el paso de borrado posterior.
 """
 import hashlib
 import json
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -14,7 +13,8 @@ from pathlib import Path
 from PIL import Image
 import imagehash
 
-from config_rutas import CARPETA_DB
+from config_rutas import CARPETA_DB, EXT_FOTO, EXT_VIDEO
+from utils_comun import letra_disco
 from utils_lock import adquirir_lock, liberar_lock
 
 try:
@@ -26,7 +26,6 @@ except Exception:
 # --- Configuracion ---
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 CARPETA_VIDEOS = "VIDEOS"
 UMBRAL_PHASH = 5          # 0 = identicas; 5 = casi identicas; >10 empieza a dar falsos positivos
@@ -35,23 +34,6 @@ SALIDA = SCRIPTS
 # Lock de instancia unica, en la misma carpeta que usan indexar_fotos.py /
 # indexar_videos.py (CARPETA_DB de config_rutas.py, el chroma/ compartido).
 LOCK = Path(CARPETA_DB) / "duplicados.lock"
-
-EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
-EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp"}
-
-
-def letra_disco():
-    ps = (
-        f'(Get-Volume | Where-Object FileSystemLabel -eq "{ETIQUETA_DISCO}").DriveLetter'
-    )
-    r = subprocess.run(
-        ["powershell", "-NoProfile", "-Command", ps],
-        capture_output=True, text=True
-    )
-    letra = r.stdout.strip()
-    if not letra:
-        raise SystemExit(f"No se encuentra el disco con etiqueta '{ETIQUETA_DISCO}'. Conectalo.")
-    return letra
 
 
 def sha256(ruta, bloque=1024 * 1024):

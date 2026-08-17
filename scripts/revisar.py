@@ -7,7 +7,6 @@ import base64
 import hashlib
 import io
 import json
-import subprocess
 import sys
 from datetime import datetime
 from html import escape
@@ -16,7 +15,8 @@ from pathlib import Path
 from PIL import Image
 import imagehash
 
-from config_rutas import CARPETA_DB
+from config_rutas import CARPETA_DB, EXT_FOTO, EXT_VIDEO
+from utils_comun import letra_disco
 from utils_lock import adquirir_lock, liberar_lock
 
 Image.MAX_IMAGE_PIXELS = 300_000_000  # limite explicito de PIL contra "bombas de descompresion"
@@ -29,7 +29,6 @@ except Exception:
 
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
 
-ETIQUETA_DISCO = "Multimedia IA"
 CARPETA_FOTOS = "FOTOS"
 CARPETA_VIDEOS = "VIDEOS"
 UMBRAL_PHASH = 5
@@ -39,19 +38,6 @@ MINIATURA = 260
 # Lock de instancia unica, en la misma carpeta que usan indexar_fotos.py /
 # indexar_videos.py (CARPETA_DB de config_rutas.py, el chroma/ compartido).
 LOCK = Path(CARPETA_DB) / "revisar.lock"
-
-EXT_FOTO = {".jpg", ".jpeg", ".png", ".heic", ".bmp", ".webp", ".tiff", ".gif"}
-EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".3gp"}
-
-
-def letra_disco():
-    ps = f'(Get-Volume | Where-Object FileSystemLabel -eq "{ETIQUETA_DISCO}").DriveLetter'
-    r = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                       capture_output=True, text=True)
-    letra = r.stdout.strip()
-    if not letra:
-        raise SystemExit(f"No se encuentra el disco '{ETIQUETA_DISCO}'. Conectalo.")
-    return letra
 
 
 def sha256(ruta, bloque=1024 * 1024):

@@ -15,19 +15,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from organizar_fotos import letra_disco, nombre_libre, EXT_FOTO, CARPETA_FOTOS
+from config_rutas import EXT_FOTO, EXT_VIDEO_MOVIL
+from organizar_fotos import nombre_libre, CARPETA_FOTOS
+from utils_comun import letra_disco
 
 SCRIPTS = Path(__file__).resolve().parent   # D:\proyecto-repo\scripts (o D:\paperless\scripts en la copia viva)
 DB = SCRIPTS / "ingesta_fotos.db"
 LOG = SCRIPTS / "ingesta_fotos.log"
-
-# organizar_fotos.py no define extensiones ni carpeta de video (solo
-# fotos), y ninguno de los EXT_VIDEO existentes en el repo (duplicados.py,
-# indexar_videos.py, revisar.py) coincide exactamente con este conjunto
-# -- todos incluyen .wmv/.mpg/.mpeg de mas, y solo indexar_videos.py trae
-# .webm. Se define aqui, literal, en vez de reutilizar uno que anadiria
-# formatos no pedidos.
-EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}
 
 # "VIDEOS" coincide en los cuatro scripts del repo que lo usan
 # (duplicados.py, indexar_videos.py, revisar.py, limpiar.py); se define
@@ -110,7 +104,7 @@ def ficheros_del_buzon(buzon):
         ext = p.suffix.lower()
         if ext in EXT_FOTO:
             resultado.append((p, "foto"))
-        elif ext in EXT_VIDEO:
+        elif ext in EXT_VIDEO_MOVIL:
             resultado.append((p, "video"))
     return resultado
 
