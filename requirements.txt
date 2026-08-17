@@ -20,7 +20,7 @@ mcp==1.28.1
 chromadb==1.5.9
 
 # HTTP: llamadas a Paperless, Ollama e Immich
-requests==2.32.3
+requests==2.33.0
 
 # Documentos (indexar_documentos.py): PDF, DOCX, ODT
 pypdf==6.14.2
@@ -29,6 +29,6 @@ odfpy==1.4.1
 
 # Fotos/vídeos (indexar_fotos.py, indexar_videos.py, duplicados.py, revisar.py,
 # organizar_fotos.py, mcp_fotos.py): decodificar imágenes, HEIC y detectar duplicados
-pillow==12.2.0
+pillow==12.3.0
 pillow_heif==1.5.0
 ImageHash==4.3.2
