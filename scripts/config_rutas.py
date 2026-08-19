@@ -61,3 +61,10 @@ EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".
 # que genera un movil. Se excluyen .wmv/.mpg/.mpeg a proposito -- son
 # formatos heredados de PC que no deben entrar por esa via.
 EXT_VIDEO_MOVIL = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}
+
+# --- Puente manual a Paperless (puente_paperless.py) ---
+# Derivadas de CARPETAS_PDFS[1] (la carpeta local, NO la de OneDrive): asi
+# a_paperless/ y enviado/ no se sincronizan de mas a la nube por error.
+CARPETA_A_PAPERLESS = CARPETAS_PDFS[1] / "a_paperless"
+CARPETA_ENVIADO = CARPETAS_PDFS[1] / "enviado"
+CARPETA_CONSUME = Path(r"D:\paperless\consume")
