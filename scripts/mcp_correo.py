@@ -27,6 +27,9 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from indexar_correo import construir_ids_cuenta
+from mapear_mbox import PERFIL_TB, leer_prefs_servidores
+
 # --- Rutas ---
 RUTA_CORREO_DB = Path(r"D:\paperless\correo\correo.sqlite")
 
@@ -394,6 +397,70 @@ def listar_cuentas() -> dict:
         }
         for f in filas
     ]
+    return {"cuentas": cuentas}
+
+
+def _enmascarar_direccion(valor: str | None) -> str | None:
+    """Enmascara la parte local de una direccion de correo, dejando el
+    dominio integro: "winchi@gmail.com" -> "w****i@gmail.com". Partes
+    locales de 1-2 caracteres se enmascaran enteras ("**"). Devuelve None
+    si `valor` no tiene forma de direccion de correo -- p.ej. las cuentas
+    locales/feeds, cuyo "usuario" en prefs.js es literalmente "nobody",
+    no un email."""
+    if not valor or "@" not in valor:
+        return None
+    local, _, dominio = valor.partition("@")
+    if not local or not dominio:
+        return None
+    if len(local) <= 2:
+        local_enmascarada = "**"
+    else:
+        local_enmascarada = local[0] + "*" * (len(local) - 2) + local[-1]
+    return f"{local_enmascarada}@{dominio}"
+
+
+@mcp.tool()
+def describir_cuentas() -> dict:
+    """Resuelve cada id corto de cuenta (los mismos "gmail-1", "outlook-2"...
+    que devuelve listar_cuentas y que se usan para filtrar en
+    buscar_correos/listar_correos/contar_correos) a la direccion de correo
+    real de esa cuenta, pero ENMASCARADA (p.ej. "w****i@gmail.com", dominio
+    integro, parte local con solo el primer y ultimo caracter visibles) --
+    asi se puede saber a que buzon corresponde cada id sin exponer la
+    direccion completa.
+
+    Deterministico: lee prefs.js del perfil de Thunderbird con la misma
+    logica y la misma regla de numeracion que usa indexar_correo.py para
+    generar el campo "cuenta" (no las reimplementa, las reutiliza), asi
+    que los ids siempre casan con los de listar_cuentas. No hace ninguna
+    llamada de red ni depende de correo.sqlite -- puede usarse aunque el
+    indice de correo no este generado.
+
+    Si prefs.js no existe o no se puede leer, no falla: devuelve la lista
+    vacia junto con un "error" explicando el motivo. Si una cuenta
+    concreta no resuelve a una direccion de correo real (cuentas
+    locales/feeds, que no tienen email), esa entrada lleva
+    "direccion": null en vez de fallar.
+
+    Usa esta herramienta cuando el usuario pregunte "que cuenta es
+    gmail-3" o quiera saber a que buzon corresponde un id antes de
+    filtrar por el.
+    """
+    try:
+        mapa_prefs = leer_prefs_servidores(PERFIL_TB)
+        ids_cuenta = construir_ids_cuenta(mapa_prefs)
+    except Exception as e:
+        return {"cuentas": [], "error": f"No se pudo leer prefs.js del perfil de Thunderbird: {e}"}
+
+    cuentas = []
+    for (_host, usuario), cuenta_id in ids_cuenta.items():
+        try:
+            direccion = _enmascarar_direccion(usuario)
+        except Exception:
+            direccion = None
+        cuentas.append({"cuenta": cuenta_id, "direccion": direccion})
+
+    cuentas.sort(key=lambda c: c["cuenta"])
     return {"cuentas": cuentas}
 
 
