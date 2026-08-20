@@ -30,16 +30,15 @@ directorios de Thunderbird se llaman por host, no por cuenta), pero aun asi
 solo se imprimen nombres de carpeta y el directorio de host -- nunca la
 ruta completa del perfil.
 
-Sin dependencias externas: os, pathlib, sqlite3, urllib.parse.
+Sin dependencias externas: pathlib, sqlite3, urllib.parse (mas
+config_rutas, del propio repo, de donde salen PERFIL_TB y RUTA_GLODA).
 """
 
-import os
 import sqlite3
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-PERFIL_TB = Path(os.environ["APPDATA"]) / "Thunderbird" / "Profiles" / "6g35p5va.default-release"
-RUTA_GLODA = Path(r"D:\paperless\correo\gloda.sqlite")
+from config_rutas import PERFIL_TB, RUTA_GLODA
 
 CAMPOS_SERVIDOR = ("hostname", "userName", "directory-rel")
 
