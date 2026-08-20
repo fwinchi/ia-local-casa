@@ -31,6 +31,16 @@ CARPETAS_PDFS = [
     (Path.home() / "Documents" / "Documentos para indexar").resolve(),
 ]
 
+# ADVERTENCIA (GHSA-f4j7-r4q5-qw2c / CVE-2026-45829, ver
+# docs/vulnerabilidades-conocidas.md): chromadb 1.5.9 tiene un RCE en
+# CollectionCommon._embed() que se dispara cuando se llama a
+# .add()/.upsert()/.query()/.get() con documents=/query_texts= SIN pasar
+# tambien embeddings=/query_embeddings= ya calculados -- Chroma entonces
+# calcula el embedding el mismo, y si la coleccion tiene una
+# embedding_function maliciosa en su configuracion, se ejecuta. Todos los
+# scripts de este repo pasan siempre el embedding ya calculado (via
+# Ollama) en cada .add()/.upsert()/.query(); NUNCA anadir una llamada
+# nueva a Chroma sin hacer lo mismo.
 CARPETA_DB = str(BASE / "chroma")
 
 # --- Documentos ---
