@@ -78,7 +78,7 @@ flowchart LR
 
 | Nodo | SO / Arquitectura | Servicios | Rutas de datos | Puertos |
 |---|---|---|---|---|
-| NASA | Windows 11, x86_64, RTX 5080 16 GB | Ollama, Open WebUI, LiteLLM, SearXNG, Paperless-ngx, ChromaDB (`PersistentClient`), Immich, mcpo (filesystem / Paperless / documentos / fotos) | `D:\paperless`, `D:\paperless\chroma`, `D:\immich` | 11434 (Ollama) · 4000 (LiteLLM) · 8080 (SearXNG) · 8010 (Paperless-ngx) · 2283 (Immich) · 8000 (mcpo filesystem) · 8001 (mcpo Paperless) · 8002 (mcpo documentos) · 8003 (mcpo fotos) |
+| NASA | Windows 11, x86_64, RTX 5080 16 GB | Ollama, Open WebUI, LiteLLM, SearXNG, Paperless-ngx, ChromaDB (`PersistentClient`), Immich, mcpo (filesystem / Paperless / documentos / fotos / correo) | `D:\paperless`, `D:\paperless\chroma`, `D:\immich` | 11434 (Ollama) · 4000 (LiteLLM) · 8080 (SearXNG) · 8010 (Paperless-ngx) · 2283 (Immich) · 8000 (mcpo filesystem) · 8001 (mcpo Paperless) · 8002 (mcpo documentos) · 8003 (mcpo fotos) · 8005 (mcpo correo) |
 | Orange Pi 5 Plus | Linux, ARM64 | Destino de backups | `~/backup-nasa/` (export de Paperless, ChromaDB, fotos, vídeos, volumen de Open WebUI) | — |
 
 Immich es un circuito aparte (caras y personas, biblioteca externa en solo lectura) y no entra en este diagrama simplificado — el desglose completo de los tres circuitos y por qué son independientes está en la sección 3.
@@ -176,12 +176,12 @@ Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura
 | ChromaDB | Fichero local | Búsqueda semántica |
 | Immich | Docker, puerto 2283 | Fotos, caras, personas |
 | LiteLLM | Docker, puerto 4000 | Pasarela a modelos de Google |
-| mcpo | Windows, puertos 8001–8003 | Convierte MCP en OpenAPI para Open WebUI |
+| mcpo | Windows, puertos 8001–8003 y 8005 | Convierte MCP en OpenAPI para Open WebUI |
 | OpenWhispr | Windows | Dictado por voz (Parakeet TDT 0.6B) |
 
-**Puertos mcpo:** 8001 Paperless · 8002 Documentos · 8003 Fotos/Vídeos.
+**Puertos mcpo:** 8001 Paperless · 8002 Documentos · 8003 Fotos/Vídeos · 8005 Correo.
 
-**Acceso desde la red:** mcpo (8001-8003) y LiteLLM (4000) escuchan solo en `127.0.0.1` — no alcanzables desde otros dispositivos. Paperless (8010) e Immich (2283) sí son accesibles en tu red local (detalle en la sección 9).
+**Acceso desde la red:** mcpo (8001-8003, 8005) y LiteLLM (4000) escuchan solo en `127.0.0.1` — no alcanzables desde otros dispositivos. Paperless (8010) e Immich (2283) sí son accesibles en tu red local (detalle en la sección 9).
 
 **Modelos Ollama en uso:** `gptoss-paperless` (gpt-oss:20b, `num_ctx` 16384, temp 0.1), `vl3-paperless` (qwen3-vl:8b, visión), `bge-m3` (embeddings de documentos), `nomic-embed-text` (embeddings de fotos y vídeos, heredado).
 
@@ -397,13 +397,36 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
   2. `indexar_fotos.py`, también **esperando**.
   3. `indexar_videos.py`, **sin esperar** — se lanza en segundo plano y la tarea programada se da por completada aunque el indexado de vídeos siga corriendo.
 - **`run-indexar.bat`**, **`run-organizador.bat`**, **`start-informe-fotos.bat`** — cada uno llama a su script correspondiente (Python o PowerShell); se lanzan a través de `oculto.vbs` para no mostrar consola.
-- **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcpo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen); también se lanzan a través de `oculto.vbs`.
+- **`start-mcp-fotos.bat`**, **`start-mcp-documentos.bat`**, **`start-mcpo.bat`**, **`start-mcp-correo.bat`** — arrancan cada servidor `mcpo` (quedan corriendo, no son tareas que terminen). Ya no se lanzan por tarea programada ni por `oculto.vbs`: los cuatro corren como servicios NSSM (ver «Servicios NSSM (mcpo)», justo debajo).
 - **`run-duplicados.bat`** — no tiene tarea programada propia. Es un lanzador manual para forzar una revisión de duplicados fuera del ciclo automático de `vigilante-duplicados` (que ya hace su propia comprobación llamando directamente a `revisar.py` desde `vigilante.py`).
 - **`salud.bat`** — tampoco tiene tarea programada. Es para ejecutar a mano cuando quieras un diagnóstico del stack; por eso, a diferencia de los demás `.bat`, termina con `pause` (para poder leer el resultado en la consola) y no pasa por `oculto.vbs`.
 
+### Servicios NSSM (mcpo)
+
+Los 4 servidores `mcpo` (Paperless, Documentos, Fotos, Correo) no arrancan como tarea programada: corren como **servicios de Windows** gestionados por NSSM, bajo la cuenta **SYSTEM**, con tipo de arranque **Automatic**. Sustituyen a las tareas programadas anteriores (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`), que quedaron desactivadas para evitar duplicados y conflictos de puerto.
+
+| Servicio | Lanzador | Puerto |
+|---|---|---|
+| `mcp-paperless` | `start-mcpo.bat` | 8001 |
+| `mcp-documentos` | `start-mcp-documentos.bat` | 8002 |
+| `mcp-fotos` | `start-mcp-fotos.bat` | 8003 |
+| `mcp-correo` | `start-mcp-correo.bat` | 8005 |
+
+Logs de cada servicio en `D:\paperless\scripts\nssm-<servicio>.log` (stdout y stderr van al mismo fichero).
+
+La configuración de NSSM (ruta del ejecutable, directorio de trabajo, logs, tipo de arranque) vive en el registro de Windows, fuera de este repositorio — no hay ningún fichero versionado que la represente. Para recrearla desde cero: [`scripts/instalar-servicios.ps1`](scripts/instalar-servicios.ps1). Requiere PowerShell como Administrador y NSSM instalado (`winget install NSSM.NSSM`).
+
+**Bajo SYSTEM, el intérprete tiene que ser el real, no el shim.** Hay que apuntar a `...\pythoncore-3.14-64\python.exe`, no a `...\Python\bin\python.exe` (sección 4.7): ese segundo es un App Execution Alias que falla al ejecutarse bajo la cuenta SYSTEM. Tampoco valen los paquetes instalados en el `site-packages` de usuario: un servicio que corre como SYSTEM no los ve, hay que instalarlos a nivel de sistema.
+
+### Repo vs. copia viva: qué diverge
+
+El repositorio guarda las rutas de los `.bat` con `%USERPROFILE%`; la copia viva en `D:\paperless\scripts` — la que de verdad arrancan los servicios NSSM — usa rutas absolutas. Los scripts se sincronizan a mano del repo a la copia viva; no hay ningún mecanismo automático que los mantenga iguales.
+
+**Excepciones que nunca se sincronizan desde el repo:** `secrets.local.bat` y `backup-orangepi.bat`. Ambos solo tienen credenciales reales en la copia viva; las versiones del repo (`secrets.local.bat.example` y la del propio `backup-orangepi.bat` versionada) no deben sobrescribirlas.
+
 ### Las tareas programadas reales
 
-Creadas con `schtasks` desde PowerShell como Administrador:
+Los tres servidores mcpo que antes tenían tarea propia (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`) ya no la tienen: ver «Servicios NSSM (mcpo)» arriba. Estas son las que quedan, creadas con `schtasks` desde PowerShell como Administrador:
 
 | Tarea | Acción | Disparador |
 |---|---|---|
@@ -411,9 +434,6 @@ Creadas con `schtasks` desde PowerShell como Administrador:
 | `vigilante-duplicados` | `run-vigilante.vbs` | Repetición cada 15 minutos |
 | `indexar-documentos` | `oculto.vbs` + `run-indexar.bat` | Al iniciar sesión |
 | `organizador-descargas` | `oculto.vbs` + `run-organizador.bat` | Al iniciar sesión |
-| `mcpo-paperless` | `oculto.vbs` + `start-mcpo.bat` | Al iniciar sesión |
-| `mcp-documentos` | `oculto.vbs` + `start-mcp-documentos.bat` | Al iniciar sesión |
-| `mcp-fotos` | `oculto.vbs` + `start-mcp-fotos.bat` | Al iniciar sesión |
 | `informe-fotos-semanal` | `oculto.vbs` + `start-informe-fotos.bat` | Semanal, domingos 22:00 |
 
 Se crean con `schtasks ... /ru <usuario> /rl limited /f` — se ejecutan como el usuario indicado, con privilegios normales, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
@@ -511,7 +531,7 @@ Verificadas las 8 funcionando igual con `Limited`.
 Resumen de una página, deducido del código real, no de memoria:
 
 **Qué escucha en `127.0.0.1` (solo el propio PC, ningún otro dispositivo de la red puede alcanzarlo):**
-- Los tres `mcpo`: 8001 (Paperless), 8002 (Documentos OneDrive), 8003 (Fotos disco externo).
+- Los cuatro `mcpo`: 8001 (Paperless), 8002 (Documentos OneDrive), 8003 (Fotos disco externo), 8005 (Correo).
 - LiteLLM: 4000.
 
 **Qué está expuesto a la LAN, y por qué:**
@@ -660,18 +680,19 @@ Antes de tocarlo guarda una copia del original en `<TU_RAIZ>\backup_pdfs`.
 Casi siempre es que un servicio no arrancó. Comprobar:
 
 ```
-netstat -ano | findstr ":8001 :8002 :8003"
+netstat -ano | findstr ":8001 :8002 :8003 :8005"
 ```
 
-Deben salir los tres. Si falta alguno, lanzarlo a mano:
+Deben salir los cuatro. Si falta alguno, lanzarlo a mano:
 
 | Puerto | Herramienta | Arrancar con |
 |---|---|---|
 | 8001 | Paperless | `<TU_RAIZ>\scripts\start-mcpo.bat` |
 | 8002 | Documentos OneDrive | `<TU_RAIZ>\scripts\start-mcp-documentos.bat` |
 | 8003 | Fotos Disco Externo | `<TU_RAIZ>\scripts\start-mcp-fotos.bat` |
+| 8005 | Correo | `<TU_RAIZ>\scripts\start-mcp-correo.bat` |
 
-> Todos tienen tarea programada al iniciar sesión. Si uno falla siempre, hay que revisar su tarea.
+> Los cuatro corren como servicios NSSM con arranque automático (sección 7, «Servicios NSSM (mcpo)»), no como tarea programada. Si uno falla siempre, comprueba su estado con `Get-Service mcp-<nombre>` y revisa su log en `nssm-<servicio>.log`.
 
 ### 9. Reglas que ya me han costado tiempo
 
