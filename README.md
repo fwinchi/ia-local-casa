@@ -130,7 +130,7 @@ Lo que sí se sabe con certeza: la VRAM es el límite real. `gpt-oss:20b` es el 
 
 ## 3. Arquitectura, con diagrama
 
-Son tres circuitos independientes. Conviene explicarlo así desde el principio porque es lo que más confunde al empezar: no hay un único "pipeline", hay tres que no dependen entre sí.
+Son cuatro circuitos independientes. Conviene explicarlo así desde el principio porque es lo que más confunde al empezar: no hay un único "pipeline", hay cuatro que no dependen entre sí.
 
 ```mermaid
 flowchart TB
@@ -151,19 +151,26 @@ flowchart TB
         D3 --> D4["buscar_fotos /<br>buscar_videos"]
     end
 
+    subgraph C5["Circuito 4 · Correo"]
+        direction LR
+        F1["Thunderbird<br>gloda + mbox"] --> F2["copiar_gloda.py →<br>mapear_mbox.py →<br>indexar_correo.py"] --> F3[("correo.sqlite<br>FTS5")]
+        F3 --> F4["buscar_correos /<br>listar_correos /<br>leer_correo"]
+    end
+
     subgraph C4["Immich · aparte"]
         direction LR
         E1["Biblioteca externa<br>(solo lectura)"] --> E2["Caras y personas"]
     end
 
-    C1 ~~~ C2 ~~~ C3 ~~~ C4
+    C1 ~~~ C2 ~~~ C3 ~~~ C5 ~~~ C4
 ```
 
 1. **Paperless** — lo que se deja en la carpeta `consume` se OCR-iza, AIssist extrae los campos y `autocorresponsal.py` asigna el remitente.
 2. **Índice de documentos** — `indexar_documentos.py` recorre las carpetas configuradas, trocea el texto, lo embebe con `bge-m3` y lo guarda en ChromaDB. Soporta PDF, DOCX, TXT y ODT.
 3. **Fotos y vídeos** — `indexar_fotos.py` / `indexar_videos.py` describen cada archivo con el modelo de visión y lo indexan. Se consulta con `buscar_fotos` / `buscar_videos`.
+4. **Correo** — `copiar_gloda.py` copia el índice de Thunderbird, `mapear_mbox.py` resuelve carpetas vía `prefs.js` e `indexar_correo.py` construye `correo.sqlite` con FTS5. Solo lectura: no envía, borra ni mueve nada. Se consulta con `buscar_correos` / `listar_correos` / `leer_correo`.
 
-Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura — no comparte datos con los otros tres circuitos.
+Immich va aparte: caras y personas, sobre una biblioteca externa en solo lectura — no comparte datos con los otros cuatro circuitos.
 
 ### Piezas del stack
 
@@ -325,11 +332,15 @@ Todos viven en `scripts\`. Los lanzadores (`run-*.bat`, `run-*.vbs`, `start-mcp-
 |---|---|
 | `autocorresponsal.py` | Lee el campo Proveedor/emisor de cada documento sin interlocutor asignado y crea/asigna el correspondiente en Paperless. Normaliza Unicode para no duplicar por tildes. |
 | `buscar.py` | Búsqueda semántica por terminal sobre los PDFs indexados, para probar consultas sin pasar por Open WebUI. |
-| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por ocho scripts — documentos (`indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) — para no mantener copias sueltas de cada una. |
+| `config_rutas.py` | Sin ejecutable propio: constantes de rutas y configuración compartidas por doce scripts — documentos (`indexar_documentos.py`, `mcp_documentos.py`, `buscar.py`, `salud.py`: `CARPETAS_PDFS`, `CARPETA_DB`, `MODELO`, `EXTENSIONES`...) y fotos/vídeos (`indexar_fotos.py`, `indexar_videos.py`, `mcp_fotos.py`, `limpiar.py`: `OLLAMA_BASE`, `MODELO_VISION`, `MODELO_EMBED_FOTOS`) y correo (`copiar_gloda.py`, `mapear_mbox.py`, `indexar_correo.py`, `mcp_correo.py`: `perfil_tb()`, `RUTA_GLODA`) — para no mantener copias sueltas de cada una. |
 | `indexar_documentos.py` | Indexa PDF, DOCX, TXT y ODT de las carpetas configuradas. Si un PDF no tiene texto, le aplica OCR automático (copia de seguridad previa a `backup_pdfs`) y lo reintenta — DOCX/TXT/ODT nunca necesitan OCR, siempre traen texto nativo. |
 | `mcp_documentos.py` | Servidor MCP: expone `buscar_en_documentos`, `listar_documentos_indexados`, `abrir_documento` (restringido a las carpetas indexadas: rechaza con un mensaje claro cualquier ruta fuera de ellas) y `contar_documentos`. |
 | `indexar_fotos.py` / `indexar_videos.py` | Indexan el disco externo. Los vídeos, con 3 fotogramas extraídos vía ffmpeg. Incremental: solo procesa lo nuevo. |
 | `mcp_fotos.py` | Servidor MCP: expone `buscar_fotos`, `buscar_videos`, `estadisticas_fotos`, `listar_personas`, `listar_personas_sin_nombre`, `fotos_por_lugar` y `fotos_por_fecha` (las cuatro últimas filtran y cuentan en código en vez de mandarle al modelo el JSON crudo de Immich, mismo motivo que `contar_documentos` — parámetros y detalle de cada una, justo debajo); genera una galería HTML con los resultados de las búsquedas. |
+| `copiar_gloda.py` | Copia `global-messages-db.sqlite` del perfil de Thunderbird a una copia de solo lectura, para leerla sin pelearse con el lock de Thunderbird. |
+| `mapear_mbox.py` | Resuelve la correspondencia entre carpetas de gloda y ficheros mbox en disco usando las claves de `prefs.js`. |
+| `indexar_correo.py` | Construye `correo.sqlite` con índice FTS5 a partir de gloda y los mbox. Incremental. |
+| `mcp_correo.py` | Servidor MCP (puerto 8005): expone `buscar_correos`, `listar_correos`, `leer_correo`, `contar_correos`, `listar_cuentas` y `describir_cuentas`. Solo lectura. Cada correo incluye un enlace `mid:` que abre el mensaje en Thunderbird. |
 | `duplicados.py` | Detecta duplicados de fotos (SHA-256 + pHash) y vídeos (SHA-256) en el disco externo. Genera informe `.txt` y plan `.json`. No borra nada. |
 | `revisar.py` | Genera un HTML interactivo para revisar a ojo los duplicados y descargar la lista de lo que se confirma borrar. |
 | `limpiar.py` | Mueve a cuarentena los duplicados confirmados en `revision.html`. Nunca borra directamente; pide escribir "SI" para continuar. |
