@@ -6,4 +6,4 @@ if not defined PAPERLESS_TOKEN (
 )
 set "PAPERLESS_URL=http://localhost:8010"
 set "PAPERLESS_API_KEY=%PAPERLESS_TOKEN%"
-%USERPROFILE%\AppData\Local\Python\pythoncore-3.14-64\Scripts\mcpo.exe --host 127.0.0.1 --port 8001 -- npx -y @baruchiro/paperless-mcp@2.0.1
+%USERPROFILE%\AppData\Local\Python\pythoncore-3.14-64\Scripts\mcpo.exe --host 127.0.0.1 --port 8001 -- "%ProgramFiles%\nodejs\npx.cmd" -y @baruchiro/paperless-mcp@2.0.1
