@@ -81,11 +81,11 @@ def _fecha_iso(epoch_segundos) -> str:
 
 
 def _con_enlace(resultado: dict, header_message_id: str | None) -> dict:
-    """Anade 'enlace': 'mid:<header_message_id>' a resultado si
+    """Anade 'enlace': '[abrir](mid:<header_message_id>)' a resultado si
     header_message_id no es None ni cadena vacia; si lo es, deja resultado
     sin ese campo."""
     if header_message_id:
-        resultado["enlace"] = f"mid:{header_message_id}"
+        resultado["enlace"] = f"[abrir](mid:{header_message_id})"
     return resultado
 
 
