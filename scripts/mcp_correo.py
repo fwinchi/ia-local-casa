@@ -402,7 +402,7 @@ def listar_cuentas() -> dict:
 
 def _enmascarar_direccion(valor: str | None) -> str | None:
     """Enmascara la parte local de una direccion de correo, dejando el
-    dominio integro: "xavier@gmail.com" -> "xa****r@gmail.com". Partes
+    dominio integro: "xavier@gmail.com" -> "xa***r@gmail.com". Partes
     locales de 1-2 caracteres se devuelven tal cual (sin asteriscos); de
     3 caracteres se devuelven como 2 primeras + 1 asterisco (la ultima no
     cabe). Devuelve None si `valor` no tiene forma de direccion de correo
@@ -418,7 +418,7 @@ def _enmascarar_direccion(valor: str | None) -> str | None:
     elif len(local) == 3:
         local_enmascarada = local[:2] + "*"
     else:
-        local_enmascarada = local[:2] + "*" * (len(local) - 2) + local[-1]
+        local_enmascarada = local[:2] + "*" * (len(local) - 3) + local[-1]
     return f"{local_enmascarada}@{dominio}"
 
 
@@ -427,7 +427,7 @@ def describir_cuentas() -> dict:
     """Resuelve cada id corto de cuenta (los mismos "gmail-1", "outlook-2"...
     que devuelve listar_cuentas y que se usan para filtrar en
     buscar_correos/listar_correos/contar_correos) a la direccion de correo
-    real de esa cuenta, pero ENMASCARADA (p.ej. "xa****r@gmail.com", dominio
+    real de esa cuenta, pero ENMASCARADA (p.ej. "xa***r@gmail.com", dominio
     integro, parte local con las dos primeras letras y la ultima visibles) --
     asi se puede saber a que buzon corresponde cada id sin exponer la
     direccion completa.
