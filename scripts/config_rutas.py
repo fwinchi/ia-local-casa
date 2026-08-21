@@ -81,7 +81,7 @@ EXT_VIDEO_MOVIL = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}
 # a_paperless/ y enviado/ no se sincronizan de mas a la nube por error.
 CARPETA_A_PAPERLESS = CARPETAS_PDFS[1] / "a_paperless"
 CARPETA_ENVIADO = CARPETAS_PDFS[1] / "enviado"
-CARPETA_CONSUME = Path(r"D:\paperless\consume")
+CARPETA_CONSUME = BASE / "consume"
 
 # --- Correo (mapear_mbox.py, indexar_correo.py, mcp_correo.py, copiar_gloda.py) ---
 # Perfil de Thunderbird de donde salen tanto el gloda "en vivo" (RUTA_GLODA_ORIGEN,
@@ -124,4 +124,4 @@ def __getattr__(name):
 
 # Copia de solo lectura de gloda que usan mapear_mbox.py e indexar_correo.py.
 # La genera copiar_gloda.py; no es el gloda real de Thunderbird.
-RUTA_GLODA = Path(r"D:\paperless\correo\gloda.sqlite")
+RUTA_GLODA = BASE / "correo" / "gloda.sqlite"
