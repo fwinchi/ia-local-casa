@@ -80,6 +80,15 @@ def _fecha_iso(epoch_segundos) -> str:
     return datetime.fromtimestamp(epoch_segundos).isoformat(timespec="seconds")
 
 
+def _con_enlace(resultado: dict, header_message_id: str | None) -> dict:
+    """Anade 'enlace': 'mid:<header_message_id>' a resultado si
+    header_message_id no es None ni cadena vacia; si lo es, deja resultado
+    sin ese campo."""
+    if header_message_id:
+        resultado["enlace"] = f"mid:{header_message_id}"
+    return resultado
+
+
 def _rango_fechas(desde: str | None, hasta: str | None):
     """(epoch_desde, epoch_hasta, error). error es un str si el formato de
     alguna fecha no es YYYY-MM-DD; en ese caso los otros dos son None."""
@@ -149,7 +158,7 @@ def buscar_correos(
             return {"error": error_fecha}
 
         sql = (
-            "SELECT c.id, c.fecha, c.remitente, c.remitente_nombre, c.asunto, c.carpeta, c.cuenta, "
+            "SELECT c.id, c.header_message_id, c.fecha, c.remitente, c.remitente_nombre, c.asunto, c.carpeta, c.cuenta, "
             f"snippet(correos_fts, 1, '»', '«', ' … ', {TOKENS_SNIPPET_FTS}) AS fragmento "
             "FROM correos_fts JOIN correos c ON c.id = correos_fts.rowid "
             "WHERE correos_fts MATCH ?"
@@ -178,7 +187,7 @@ def buscar_correos(
         fragmento = f["fragmento"] or ""
         if len(fragmento) > LARGO_SNIPPET:
             fragmento = fragmento[:LARGO_SNIPPET] + "…"
-        resultados.append({
+        resultados.append(_con_enlace({
             "id": f["id"],
             "fecha": _fecha_iso(f["fecha"]),
             "remitente": f["remitente"],
@@ -187,7 +196,7 @@ def buscar_correos(
             "carpeta": f["carpeta"],
             "cuenta": f["cuenta"],
             "fragmento": fragmento,
-        })
+        }, f["header_message_id"]))
     return {"resultados": resultados, "total_devueltos": len(resultados)}
 
 
@@ -229,7 +238,7 @@ def listar_correos(
             return {"error": error_fecha}
 
         sql = (
-            "SELECT id, fecha, remitente, remitente_nombre, asunto, carpeta, cuenta, tiene_adjuntos "
+            "SELECT id, header_message_id, fecha, remitente, remitente_nombre, asunto, carpeta, cuenta, tiene_adjuntos "
             "FROM correos WHERE 1=1"
         )
         parametros = []
@@ -254,16 +263,19 @@ def listar_correos(
         conexion.close()
 
     resultados = [
-        {
-            "id": f["id"],
-            "fecha": _fecha_iso(f["fecha"]),
-            "remitente": f["remitente"],
-            "remitente_nombre": f["remitente_nombre"],
-            "asunto": f["asunto"],
-            "carpeta": f["carpeta"],
-            "cuenta": f["cuenta"],
-            "tiene_adjuntos": bool(f["tiene_adjuntos"]),
-        }
+        _con_enlace(
+            {
+                "id": f["id"],
+                "fecha": _fecha_iso(f["fecha"]),
+                "remitente": f["remitente"],
+                "remitente_nombre": f["remitente_nombre"],
+                "asunto": f["asunto"],
+                "carpeta": f["carpeta"],
+                "cuenta": f["cuenta"],
+                "tiene_adjuntos": bool(f["tiene_adjuntos"]),
+            },
+            f["header_message_id"],
+        )
         for f in filas
     ]
     return {"resultados": resultados, "total_devueltos": len(resultados)}
@@ -294,20 +306,23 @@ def leer_correo(id: int) -> dict:
     if f is None:
         return {"error": f"No existe ningun correo con id {id}."}
 
-    return {
-        "id": f["id"],
-        "header_message_id": f["header_message_id"],
-        "fecha": _fecha_iso(f["fecha"]),
-        "remitente": f["remitente"],
-        "remitente_nombre": f["remitente_nombre"],
-        "destinatarios": f["destinatarios"],
-        "asunto": f["asunto"],
-        "cuerpo": f["cuerpo"],
-        "carpeta": f["carpeta"],
-        "cuenta": f["cuenta"],
-        "tiene_adjuntos": bool(f["tiene_adjuntos"]),
-        "tamano": f["tamano"],
-    }
+    return _con_enlace(
+        {
+            "id": f["id"],
+            "header_message_id": f["header_message_id"],
+            "fecha": _fecha_iso(f["fecha"]),
+            "remitente": f["remitente"],
+            "remitente_nombre": f["remitente_nombre"],
+            "destinatarios": f["destinatarios"],
+            "asunto": f["asunto"],
+            "cuerpo": f["cuerpo"],
+            "carpeta": f["carpeta"],
+            "cuenta": f["cuenta"],
+            "tiene_adjuntos": bool(f["tiene_adjuntos"]),
+            "tamano": f["tamano"],
+        },
+        f["header_message_id"],
+    )
 
 
 @mcp.tool()
