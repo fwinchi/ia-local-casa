@@ -15,7 +15,7 @@ from config_rutas import ETIQUETA_DISCO
 from utils_comun import log
 
 SCRIPTS = Path(__file__).resolve().parent   # antes: D:\paperless\scripts
-PYTHON = str(Path.home() / "AppData/Local/Python/bin/python.exe")
+PYTHON = str(Path.home() / "AppData/Local/Python/pythoncore-3.14-64/python.exe")
 REVISAR = SCRIPTS / "revisar.py"
 HTML = SCRIPTS / "revision.html"
 ESTADO = SCRIPTS / ".estado_duplicados"
@@ -56,7 +56,12 @@ def main():
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
     if r.returncode != 0:
-        log(f"ERROR en revisar.py: {r.stderr.strip()[:300]}", LOG, consola=False)
+        stderr_completo = r.stderr
+        log(f"ERROR en revisar.py (codigo {r.returncode}). Traceback completo:", LOG, consola=False)
+        with open(LOG, "a", encoding="utf-8") as f:
+            f.write("----------\n")
+            f.write(stderr_completo if stderr_completo else "(stderr vacio)")
+            f.write("\n----------\n")
         return
 
     firma = firma_html()
