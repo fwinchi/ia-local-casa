@@ -87,12 +87,40 @@ CARPETA_CONSUME = Path(r"D:\paperless\consume")
 # Perfil de Thunderbird de donde salen tanto el gloda "en vivo" (RUTA_GLODA_ORIGEN,
 # bloqueado mientras Thunderbird esta abierto) como prefs.js y los mbox en disco
 # (leidos por mapear_mbox.py). Un solo perfil: "6g35p5va.default-release".
-PERFIL_TB = Path(os.environ["APPDATA"]) / "Thunderbird" / "Profiles" / "6g35p5va.default-release"
+#
+# perfil_tb() hace la resolucion (APPDATA, o TB_APPDATA bajo LocalSystem, que
+# no tiene perfil de usuario) y solo deben llamarla los scripts de correo.
+# PERFIL_TB y RUTA_GLODA_ORIGEN se mantienen disponibles para compatibilidad
+# pero calculados de forma perezosa (module __getattr__, PEP 562): no se
+# resuelven al importar config_rutas, solo al acceder a esos nombres, para
+# que los circuitos de documentos/fotos no se rompan si no hay perfil de
+# Thunderbird (p.ej. bajo LocalSystem sin TB_APPDATA).
 
-# gloda "en vivo" de Thunderbird: se copia (copiar_gloda.py) a RUTA_GLODA para
-# poder leerlo sin pelearse con el lock de Thunderbird ni arriesgarse a leerlo
-# a medio escribir.
-RUTA_GLODA_ORIGEN = PERFIL_TB / "global-messages-db.sqlite"
+
+def perfil_tb() -> Path:
+    appdata = Path(os.environ.get("APPDATA", ""))
+    if not (appdata / "Thunderbird").is_dir():
+        appdata = Path(os.environ.get("TB_APPDATA", appdata))
+    if not (appdata / "Thunderbird").is_dir():
+        raise RuntimeError(
+            "No se encontro la carpeta Thunderbird en APPDATA "
+            f"({appdata!s}). Bajo LocalSystem (sin perfil de usuario), "
+            "define la variable de entorno TB_APPDATA apuntando al AppData "
+            "del usuario cuyo perfil de Thunderbird se quiere usar."
+        )
+    return appdata / "Thunderbird" / "Profiles" / "6g35p5va.default-release"
+
+
+def __getattr__(name):
+    if name == "PERFIL_TB":
+        return perfil_tb()
+    if name == "RUTA_GLODA_ORIGEN":
+        # gloda "en vivo" de Thunderbird: se copia (copiar_gloda.py) a
+        # RUTA_GLODA para poder leerlo sin pelearse con el lock de
+        # Thunderbird ni arriesgarse a leerlo a medio escribir.
+        return perfil_tb() / "global-messages-db.sqlite"
+    raise AttributeError(f"module {__name__!r} no tiene el atributo {name!r}")
+
 
 # Copia de solo lectura de gloda que usan mapear_mbox.py e indexar_correo.py.
 # La genera copiar_gloda.py; no es el gloda real de Thunderbird.
