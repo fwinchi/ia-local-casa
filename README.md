@@ -416,7 +416,7 @@ Logs de cada servicio en `D:\paperless\scripts\nssm-<servicio>.log` (stdout y st
 
 La configuración de NSSM (ruta del ejecutable, directorio de trabajo, logs, tipo de arranque) vive en el registro de Windows, fuera de este repositorio — no hay ningún fichero versionado que la represente. Para recrearla desde cero: [`scripts/instalar-servicios.ps1`](scripts/instalar-servicios.ps1). Requiere PowerShell como Administrador y NSSM instalado (`winget install NSSM.NSSM`).
 
-**Bajo SYSTEM, el intérprete tiene que ser el real, no el shim.** Hay que apuntar a `...\pythoncore-3.14-64\python.exe`, no a `...\Python\bin\python.exe` (sección 4.7): ese segundo es un App Execution Alias que falla al ejecutarse bajo la cuenta SYSTEM. Tampoco valen los paquetes instalados en el `site-packages` de usuario: un servicio que corre como SYSTEM no los ve, hay que instalarlos a nivel de sistema.
+**Bajo SYSTEM, mejor apuntar al intérprete real que al shim.** Se recomienda `...\pythoncore-3.14-64\python.exe` en vez de `...\Python\bin\python.exe` (sección 4.7): ese segundo es un App Execution Alias y no es fiable bajo la cuenta SYSTEM (aunque no falla siempre — `mcp-documentos` corre así y sirve bien en 8002). Tampoco valen los paquetes instalados en el `site-packages` de usuario: un servicio que corre como SYSTEM no los ve, hay que instalarlos a nivel de sistema.
 
 ### Repo vs. copia viva: qué diverge
 
