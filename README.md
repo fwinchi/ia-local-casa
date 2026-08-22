@@ -414,7 +414,9 @@ s.Run """" & WScript.Arguments(0) & """", 0, False
 
 ### Servicios NSSM (mcpo)
 
-Los 4 servidores `mcpo` (Paperless, Documentos, Fotos, Correo) no arrancan como tarea programada: corren como **servicios de Windows** gestionados por NSSM, bajo la cuenta **SYSTEM**, con tipo de arranque **Automatic**. Sustituyen a las tareas programadas anteriores (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`), que quedaron desactivadas para evitar duplicados y conflictos de puerto.
+Los 4 servidores `mcpo` (Paperless, Documentos, Fotos, Correo) no arrancan como tarea programada: corren como **servicios de Windows** gestionados por NSSM, bajo la cuenta **SYSTEM**, con tipo de arranque **Automatic** y reinicio automático si el proceso cae (comportamiento por defecto de NSSM; `instalar-servicios.ps1` no lo desactiva). Sustituyen a las tareas programadas anteriores (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`), eliminadas con `Unregister-ScheduledTask` para evitar duplicados y conflictos de puerto.
+
+**Nota de nomenclatura:** la tarea programada antigua de Paperless se llamaba `mcpo-paperless` (con "o"); el servicio NSSM que la sustituye se llama `mcp-paperless` (sin "o", ver tabla debajo) — no es una errata, son dos nombres distintos para dos mecanismos distintos en el tiempo.
 
 | Servicio | Lanzador | Puerto |
 |---|---|---|
