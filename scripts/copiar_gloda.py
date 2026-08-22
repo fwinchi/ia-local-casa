@@ -39,11 +39,12 @@ Uso:
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import time
 from pathlib import Path
 
-from config_rutas import CARPETA_DB, RUTA_GLODA, RUTA_GLODA_ORIGEN
+from config_rutas import BASE, CARPETA_DB, RUTA_GLODA, RUTA_GLODA_ORIGEN
 from utils_comun import log
 from utils_lock import adquirir_lock, liberar_lock
 
@@ -183,8 +184,33 @@ if __name__ == "__main__":
     if lock_f is None:
         log("Ya hay otra instancia de copiar_gloda.py corriendo. Saliendo sin hacer nada.", LOG)
         sys.exit(0)
+    codigo_salida = 0
     try:
         ok = main()
+        if not ok:
+            codigo_salida = 1
+        else:
+            # Copia validada: encadena mapear_mbox.py -> indexar_correo.py
+            # para que correo.sqlite quede al dia con el gloda recien
+            # copiado. Dentro del mismo try que main(), antes de liberar el
+            # lock (ver finally), para que mapear_mbox.py no pueda
+            # solaparse entre ejecuciones horarias de copiar_gloda.py.
+            for script in ("mapear_mbox.py", "indexar_correo.py"):
+                ruta_script = BASE / "scripts" / script
+                try:
+                    subprocess.run([sys.executable, str(ruta_script)], check=True, timeout=900)
+                except subprocess.TimeoutExpired:
+                    log(f"ERROR: {script} supero el timeout de 900s tras copiar gloda.", LOG)
+                    codigo_salida = 1
+                    break
+                except subprocess.CalledProcessError as e:
+                    log(f"ERROR: {script} termino con codigo {e.returncode} tras copiar gloda.", LOG)
+                    codigo_salida = 1
+                    break
+                except OSError as e:
+                    log(f"ERROR: no se pudo ejecutar {script} tras copiar gloda: {e}", LOG)
+                    codigo_salida = 1
+                    break
     finally:
         liberar_lock(lock_f)
-    sys.exit(0 if ok else 1)
+    sys.exit(codigo_salida)
