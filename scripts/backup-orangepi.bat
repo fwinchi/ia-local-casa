@@ -6,7 +6,7 @@ REM IP o nombre de host del destino en tu red local (aqui un Orange Pi, pero val
 set IP=192.168.1.XXX
 REM Usuario SSH con permiso de escritura en el destino.
 set USUARIO=TU_USUARIO
-REM Ruta base en el destino donde se guardaran los siete subdirectorios (paperless, chroma, fotos, videos, documentos, documentos-onedrive, immich-db).
+REM Ruta base en el destino donde se guardaran los seis subdirectorios (paperless, chroma, fotos, videos, documentos, immich-db).
 REM El volcado del volumen de Open WebUI no tiene subdirectorio propio:
 REM viaja dentro de paperless/export/, porque se genera ahi antes del scp.
 set DESTINO_BASE=/home/TU_USUARIO/backup-nasa
@@ -96,29 +96,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 8. Documentos a indexar, segunda carpeta de CARPETAS_PDFS (config_rutas.py):
-REM    OneDrive\Documentos\Documentos para indexar. Antes no se respaldaba
-REM    (README: "solo se respalda una de las dos carpetas, a proposito", con
-REM    el razonamiento de que OneDrive ya la sincroniza a la nube de
-REM    Microsoft) - corregido porque esa cobertura no es equivalente a un
-REM    backup propio: un fallo o borrado accidental en OneDrive se replica
-REM    igual a la nube. Mismo motivo de "bash -c" que el paso 7 (ruta con
-REM    espacios). Destino separado (documentos-onedrive/, no documentos/):
-REM    ambos rsync van sin --delete, y si compartieran carpeta de destino no
-REM    se podria distinguir al restaurar que archivo vino de cual de las dos
-REM    carpetas de origen.
-wsl bash -c "rsync -a '/mnt/c/Users/%USUARIO_WINDOWS%/OneDrive/Documentos/Documentos para indexar/' '%USUARIO%@%IP%:%DESTINO_BASE%/documentos-onedrive/'"
-if errorlevel 1 (
-    echo ERROR: fallo el rsync de documentos de OneDrive
-    exit /b 1
-)
-
-REM 9. Open WebUI de escritorio: carpeta de datos de la app instalada en
+REM 8. Open WebUI de escritorio: carpeta de datos de la app instalada en
 REM    Windows (distinta del volumen Docker del paso 2, que es otro Open
 REM    WebUI). Sin --delete, mismo criterio que fotos/videos/documentos.
 REM    config.json vive junto a data/, no dentro, por eso va en un rsync
-REM    aparte. Mismo motivo de "bash -c" con comillas simples que los pasos
-REM    7 y 8 (consistencia, aunque aqui la ruta no tenga espacios).
+REM    aparte. Mismo motivo de "bash -c" con comillas simples que el paso
+REM    7 (consistencia, aunque aqui la ruta no tenga espacios).
 wsl bash -c "rsync -a '/mnt/c/Users/%USUARIO_WINDOWS%/AppData/Roaming/open-webui/data/' '%USUARIO%@%IP%:%DESTINO_BASE%/openwebui/data/'"
 if errorlevel 1 (
     echo ERROR: fallo el rsync de datos de Open WebUI escritorio
@@ -130,7 +113,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 10. Base de datos de Immich: pg_dump dentro de su propio contenedor
+REM 9. Base de datos de Immich: pg_dump dentro de su propio contenedor
 REM    Postgres (immich_postgres), igual que el export de Paperless usa
 REM    su propio contenedor. -Fc (formato personalizado) en vez de SQL
 REM    plano: se restaura con pg_restore, no con psql. Las extensiones de
@@ -157,7 +140,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 11. Marcar como hecho hoy - solo si los diez pasos anteriores salieron bien
+REM 10. Marcar como hecho hoy - solo si los nueve pasos anteriores salieron bien
 >"%MARCA%" echo %HOY%
 echo [%date% %time%] Backup completado
 
