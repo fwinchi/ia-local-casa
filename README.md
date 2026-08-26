@@ -439,26 +439,31 @@ El repositorio guarda las rutas de los `.bat` con `%USERPROFILE%`; la copia viva
 
 ### Las tareas programadas reales
 
-Los tres servidores mcpo que antes tenían tarea propia (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`) ya no la tienen: ver «Servicios NSSM (mcpo)» arriba. Estas son las que quedan, creadas con `schtasks` desde PowerShell como Administrador:
+Los tres servidores mcpo que antes tenían tarea propia (`mcpo-paperless`, `mcp-documentos`, `mcp-fotos`) ya no la tienen: ver «Servicios NSSM (mcpo)» arriba. Estas son las 10 que quedan, creadas con `schtasks`/PowerShell como Administrador:
 
 | Tarea | Acción | Disparador |
 |---|---|---|
 | `autocorresponsal` | `run-autocorresponsal.vbs` | Repetición cada 15 minutos |
 | `vigilante-duplicados` | `run-vigilante.vbs` | Repetición cada 15 minutos |
-| `indexar-documentos` | `oculto.vbs` + `run-indexar.bat` | Al iniciar sesión |
+| `copiar-gloda` | `run-copiar-gloda.vbs` | Repetición cada hora |
+| `indexar-documentos` | `oculto.vbs` + `run-indexar.bat` | Al iniciar sesión + repetición cada hora |
+| `indexar-fotos` | `oculto.vbs` + `indexar-fotos.bat` | Al iniciar sesión (+3 min) |
 | `organizador-descargas` | `oculto.vbs` + `run-organizador.bat` | Al iniciar sesión |
+| `puente-paperless` | `oculto.vbs` + `puente-paperless.bat` | Repetición cada 2 horas |
+| `verificar-backup` | `oculto.vbs` + `start-verificar-backup.bat` | Diaria, 21:30 |
+| `backup-orangepi` | `oculto.vbs` + `backup-orangepi.bat` | Al iniciar sesión (+10 min) |
 | `informe-fotos-semanal` | `oculto.vbs` + `start-informe-fotos.bat` | Semanal, domingos 22:00 |
 
 Se crean con `schtasks ... /ru <usuario> /rl limited /f` — se ejecutan como el usuario indicado, con privilegios normales, y `/f` sobrescribe sin preguntar si la tarea ya existía (útil para volver a lanzar el mismo comando de creación sin que falle por duplicado).
 
-**No uses `/rl highest`.** Las 8 tareas se crearon originalmente así, sin necesitarlo — ninguna de ellas requiere privilegios elevados para leer/mover archivos o llamar a APIs locales, y correr con más privilegio del necesario amplía el daño posible si algo se compromete. Se corrigieron a `Limited` sin recrearlas desde cero:
+**No uses `/rl highest`.** Las 10 tareas se crearon originalmente así, sin necesitarlo — ninguna de ellas requiere privilegios elevados para leer/mover archivos o llamar a APIs locales, y correr con más privilegio del necesario amplía el daño posible si algo se compromete. Se corrigieron a `Limited` sin recrearlas desde cero:
 
 ```powershell
 $principal = New-ScheduledTaskPrincipal -UserId <usuario> -LogonType Interactive -RunLevel Limited
 Set-ScheduledTask -TaskName <tarea> -Principal $principal
 ```
 
-Verificadas las 8 funcionando igual con `Limited`.
+**Resuelto — verificado el 26-08-2026:** las 10 tareas están confirmadas en `RunLevel Limited` (`Get-ScheduledTask`, ninguna en `Highest`); esto ya no es un pendiente. Para recrearlas desde cero si se pierde el Task Scheduler (reinstalación, migración de equipo...), sin volver a caer en `/rl highest`: [`scripts/recrear-tareas-programadas.ps1`](scripts/recrear-tareas-programadas.ps1).
 
 ## 8. Lo que aprendí a base de fallar
 
