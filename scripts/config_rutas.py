@@ -25,11 +25,11 @@ from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 
-# Carpetas indexadas por indexar_documentos.py y validadas por abrir_documento en
-# mcp_documentos.py (ninguna ruta fuera de ellas se puede abrir). Ambas con el
-# mismo nombre de subcarpeta a proposito: antes se indexaba
-# OneDrive\Documentos entero y arrastraba basura (configs y logs de
-# videojuegos, cachés de DaVinci).
+# Carpeta indexada por indexar_documentos.py y validada por abrir_documento en
+# mcp_documentos.py (ninguna ruta fuera de ella se puede abrir). Antes tambien
+# se indexaba OneDrive\Documentos entero (una segunda entrada en esta lista)
+# y arrastraba basura (configs y logs de videojuegos, cachés de DaVinci);
+# esa entrada se elimino, ver historial del repo.
 CARPETA_INDEXAR = (Path.home() / "Documents" / "Documentos para indexar").resolve()
 CARPETAS_PDFS = [CARPETA_INDEXAR]
 
@@ -75,8 +75,8 @@ EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".
 EXT_VIDEO_MOVIL = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}
 
 # --- Puente manual a Paperless (puente_paperless.py) ---
-# Derivadas de CARPETA_INDEXAR (la carpeta local, NO la de OneDrive): asi
-# a_paperless/ y enviado/ no se sincronizan de mas a la nube por error.
+# Derivadas de CARPETA_INDEXAR (la carpeta local): asi a_paperless/ y
+# enviado/ no se sincronizan de mas a la nube por error.
 CARPETA_A_PAPERLESS = CARPETA_INDEXAR / "a_paperless"
 CARPETA_ENVIADO = CARPETA_INDEXAR / "enviado"
 CARPETA_CONSUME = BASE / "consume"
