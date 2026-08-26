@@ -1,10 +1,14 @@
 import os
+import time
 import unicodedata
 import requests
 
 PAPERLESS_URL = "http://localhost:8010"
 TOKEN = os.environ.get("PAPERLESS_TOKEN")
 CAMPO_PROVEEDOR = 7
+
+REINTENTOS = 3
+ESPERAS = (5, 15, 45)  # backoff entre intentos de get_all(), en segundos
 
 if not TOKEN:
     raise SystemExit(
@@ -23,15 +27,32 @@ def norm(s):
     return " ".join(s.lower().split())
 
 
-def get_all(endpoint):
-    items, url = [], f"{PAPERLESS_URL}/api/{endpoint}/?page_size=200"
-    while url:
+def _get_con_reintentos(url):
+    """GET con reintentos ante fallos transitorios -- ConnectionError,
+    Timeout o HTTP 5xx -- antes de rendirse: 3 intentos con backoff
+    5/15/45s. Si el ultimo intento tambien falla, sale limpio (sin
+    traceback) con el mismo aviso que get_all() ya usaba para un fallo de
+    conexion. Un HTTP 4xx no se reintenta (no es un fallo transitorio):
+    se devuelve tal cual y sube por raise_for_status() en get_all(), igual
+    que antes de este cambio."""
+    for intento in range(REINTENTOS):
         try:
             resp = requests.get(url, headers=H)
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            resp = None
+        if resp is not None and resp.status_code < 500:
+            return resp
+        if intento == REINTENTOS - 1:
             raise SystemExit(
                 f"AVISO: Paperless no responde en {PAPERLESS_URL} - se reintentará en la próxima ejecución"
             )
+        time.sleep(ESPERAS[intento])
+
+
+def get_all(endpoint):
+    items, url = [], f"{PAPERLESS_URL}/api/{endpoint}/?page_size=200"
+    while url:
+        resp = _get_con_reintentos(url)
         resp.raise_for_status()
         r = resp.json()
         if "results" not in r:
