@@ -44,6 +44,12 @@ def embedding(texto):
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
                 return json.loads(r.read())["embedding"]
+        except urllib.error.HTTPError as e:
+            if e.code < 500:
+                raise
+            if intento == 2:
+                raise
+            time.sleep(esperas[intento])
         except (ConnectionResetError, urllib.error.URLError, TimeoutError):
             if intento == 2:
                 raise
