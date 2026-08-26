@@ -6,6 +6,7 @@ Se sirve via mcpo para Open WebUI.
 import json
 import os
 import urllib.request
+from decimal import Decimal
 from pathlib import Path
 
 import chromadb
@@ -13,6 +14,7 @@ import requests
 from mcp.server.fastmcp import FastMCP
 
 from config_rutas import CARPETAS_PDFS, CARPETA_DB, OLLAMA, MODELO, EXTENSIONES
+from utils_importes import _parsear_importes_linea, _formatear_importe
 
 PAPERLESS_API = "http://localhost:8010/api"
 
@@ -126,6 +128,56 @@ def _listar_nombres(cab, recurso):
             nombres[item["id"]] = item["name"]
         url = datos["next"]
     return nombres
+
+
+@mcp.tool()
+def sumar_importes(documento_id: int, filtro_texto: str | None = None) -> dict:
+    """Suma los importes en euros que aparecen en el contenido (texto OCR)
+    de un documento de Paperless, recorriendolo linea a linea. Usa
+    decimal.Decimal para la suma, NUNCA float, y reconoce el formato
+    europeo de importes (miles con punto opcional, coma decimal, siempre 2
+    cifras) -- ignora numeros sin parte decimal para no confundir fechas,
+    numeros de factura o referencias con importes.
+
+    Usa esta herramienta para preguntas tipo "¿cuanto suman los importes de
+    este documento?" o, con filtro_texto, "¿cuanto suma el IVA de la
+    factura 123?". El modelo cuenta y suma mal listas largas de numeros;
+    esto es siempre exacto porque lo calcula el codigo, no el LLM.
+
+    Args:
+        documento_id: id del documento en Paperless.
+        filtro_texto: si se indica, solo se procesan las lineas que lo
+            contienen (sin distinguir mayusculas/minusculas). Sin filtro,
+            se procesan todas las lineas del documento.
+    """
+    cab = _cabecera()
+    if cab is None:
+        return {"error": "Falta la variable de entorno PAPERLESS_TOKEN."}
+
+    try:
+        r = requests.get(f"{PAPERLESS_API}/documents/{documento_id}/", headers=cab, timeout=30)
+        r.raise_for_status()
+        contenido = r.json().get("content") or ""
+    except requests.RequestException as e:
+        return {"error": f"No se pudo consultar Paperless: {e}"}
+
+    filtro_normalizado = filtro_texto.lower() if filtro_texto else None
+    total = Decimal("0")
+    detalle = []
+    for linea in contenido.splitlines():
+        if filtro_normalizado is not None and filtro_normalizado not in linea.lower():
+            continue
+        for valor in _parsear_importes_linea(linea):
+            total += valor
+            detalle.append({"linea": linea.strip(), "importe": _formatear_importe(valor)})
+
+    return {
+        "documento_id": documento_id,
+        "filtro": filtro_texto,
+        "total": _formatear_importe(total),
+        "n_importes": len(detalle),
+        "detalle": detalle,
+    }
 
 
 @mcp.tool()
