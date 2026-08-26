@@ -584,7 +584,7 @@ Además de la revisión de secretos citada en Agradecimientos (Gemini, Kimi, Gro
 
 **Aplicado:**
 
-- **Privilegios mínimos en las tareas programadas** — ver sección 7. Las 8 tareas corrían con `HighestAvailable` sin necesitarlo; corregidas a `Limited` y verificadas funcionando.
+- **Privilegios mínimos en las tareas programadas** — ver sección 7. Las 10 tareas corrían con `HighestAvailable` sin necesitarlo; corregidas a `Limited`, y verificado el 26-08-2026 que las 10 siguen así.
 - **Versión fijada del paquete MCP de Paperless** — `start-mcpo.bat` usaba `npx -y @baruchiro/paperless-mcp` sin versión, descargando lo que hubiera publicado en npm en cada arranque. Fijado a `@2.0.1`.
 - **`contar_documentos` como primer ejemplo de herramienta determinista** — ver sección 8. Principio general: contar, sumar, filtrar y cruzar datos es trabajo del código, no del modelo; el LLM interpreta la pregunta y redacta la respuesta, no hace la aritmética.
 - **Rutas validadas en `limpiar.py`** — `duplicados_confirmados.json` no puede hacer que se mueva nada fuera de las carpetas de fotos/vídeos del disco externo, aunque lo genere el propio sistema (ver sección 5).
