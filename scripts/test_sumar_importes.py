@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from utils_importes import _parsear_importes_linea, _formatear_importe
+from utils_importes import _parsear_importes_linea, _formatear_importe, procesar_linea
 
 
 class TestParsearImportesLinea(unittest.TestCase):
@@ -104,6 +104,61 @@ class TestFormatearImporte(unittest.TestCase):
 
     def test_redondea_a_2_decimales(self):
         self.assertEqual(_formatear_importe(Decimal("1234.5")), "1.234,50")
+
+
+class TestProcesarLinea(unittest.TestCase):
+    """procesar_linea() es la logica por linea de sumar_importes():
+    exclusion de SALDO + seleccion solo_primero."""
+
+    def test_excluye_linea_con_saldo_mayusculas(self):
+        importes, excluida = procesar_linea("**SALDO ANTERIOR EN EUROS** 27.919,43")
+        self.assertEqual(importes, [])
+        self.assertTrue(excluida)
+
+    def test_excluye_linea_con_saldo_minusculas(self):
+        importes, excluida = procesar_linea("saldo anterior(eur) 26.813,02")
+        self.assertEqual(importes, [])
+        self.assertTrue(excluida)
+
+    def test_excluye_linea_con_saldo_mixto_no_cabecera(self):
+        # "SALDO" en medio de una linea normal (no de cabecera) tambien
+        # debe excluirse -- el enunciado dice "sean o no de cabecera".
+        importes, excluida = procesar_linea("Movimiento con SALDO parcial 100,00 200,00")
+        self.assertEqual(importes, [])
+        self.assertTrue(excluida)
+
+    def test_no_excluye_linea_normal(self):
+        importes, excluida = procesar_linea(
+            "01-06-26 945 01-06-26 TRANSF /Isabel Rodriguez Royo 400,00 27.519,43"
+        )
+        self.assertFalse(excluida)
+        self.assertEqual(importes, [Decimal("400.00")])
+
+    def test_solo_primero_true_por_defecto_descarta_el_saldo(self):
+        importes, excluida = procesar_linea(
+            "01-06-26 280 01-06-26 RECIBO /FORUS BADAJOZ 61,27 27.098,16"
+        )
+        self.assertFalse(excluida)
+        self.assertEqual(importes, [Decimal("61.27")])
+
+    def test_solo_primero_false_conserva_todos_los_importes(self):
+        importes, excluida = procesar_linea(
+            "01-06-26 280 01-06-26 RECIBO /FORUS BADAJOZ 61,27 27.098,16",
+            solo_primero=False,
+        )
+        self.assertFalse(excluida)
+        self.assertEqual(importes, [Decimal("61.27"), Decimal("27098.16")])
+
+    def test_linea_sin_importes_no_excluida(self):
+        importes, excluida = procesar_linea("Movimientos y saldo de su cuenta")
+        # Contiene "saldo" -> excluida, aunque no tenga ningun importe.
+        self.assertEqual(importes, [])
+        self.assertTrue(excluida)
+
+    def test_linea_normal_sin_importes(self):
+        importes, excluida = procesar_linea("Fecha Referencia Fecha valor Descripcion")
+        self.assertEqual(importes, [])
+        self.assertFalse(excluida)
 
 
 if __name__ == "__main__":

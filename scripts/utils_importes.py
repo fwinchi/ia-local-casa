@@ -33,6 +33,28 @@ def _parsear_importes_linea(linea: str) -> list[Decimal]:
     return importes
 
 
+def procesar_linea(linea: str, solo_primero: bool = True) -> tuple[list[Decimal], bool]:
+    """Logica por linea de sumar_importes() (mcp_documentos.py), aislada
+    aqui para poder testearla sin arrastrar el import de mcp_documentos.py.
+
+    Excluye lineas que contengan "SALDO" (sin distinguir
+    mayusculas/minusculas) -- saldo anterior, saldo final, cabeceras de
+    extracto bancario -- para no sumarlas junto con los movimientos. Si
+    solo_primero (por defecto), de las lineas no excluidas solo se toma
+    el primer importe detectado -- el movimiento, en un extracto bancario
+    tipico donde el segundo numero de la linea es el saldo acumulado.
+
+    Devuelve (importes, excluida): importes es la lista de Decimal a
+    sumar (vacia si la linea no tiene importes, o si esta excluida);
+    excluida es True si la linea se descarto por contener "SALDO"."""
+    if "saldo" in linea.lower():
+        return [], True
+    importes = _parsear_importes_linea(linea)
+    if solo_primero:
+        importes = importes[:1]
+    return importes, False
+
+
 def _formatear_importe(valor: Decimal) -> str:
     """Decimal -> string en formato europeo (miles con punto, 2 decimales
     con coma). Inverso de lo que extrae _parsear_importes_linea."""

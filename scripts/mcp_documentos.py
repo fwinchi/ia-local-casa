@@ -14,7 +14,7 @@ import requests
 from mcp.server.fastmcp import FastMCP
 
 from config_rutas import CARPETAS_PDFS, CARPETA_DB, OLLAMA, MODELO, EXTENSIONES
-from utils_importes import _parsear_importes_linea, _formatear_importe
+from utils_importes import _formatear_importe, procesar_linea
 
 PAPERLESS_API = "http://localhost:8010/api"
 
@@ -131,13 +131,31 @@ def _listar_nombres(cab, recurso):
 
 
 @mcp.tool()
-def sumar_importes(documento_id: int, filtro_texto: str | None = None) -> dict:
+def sumar_importes(
+    documento_id: int,
+    filtro_texto: str | None = None,
+    solo_primero: bool = True,
+) -> dict:
     """Suma los importes en euros que aparecen en el contenido (texto OCR)
     de un documento de Paperless, recorriendolo linea a linea. Usa
     decimal.Decimal para la suma, NUNCA float, y reconoce el formato
     europeo de importes (miles con punto opcional, coma decimal, siempre 2
     cifras) -- ignora numeros sin parte decimal para no confundir fechas,
     numeros de factura o referencias con importes.
+
+    Excluye siempre las lineas que contienen "SALDO" (sin distinguir
+    mayusculas/minusculas) -- saldo anterior, saldo final, cabeceras de
+    extracto bancario -- para no sumar un saldo acumulado junto con los
+    movimientos. Se cuentan en "lineas_excluidas".
+
+    ADVERTENCIA sobre extractos bancarios: el texto OCR de un extracto no
+    suele marcar el signo de cada movimiento (cargo o abono), asi que esta
+    herramienta suma los importes en bruto, MEZCLANDO cargos y abonos --
+    el resultado no es "cuanto he gastado" ni "cuanto he ingresado", es la
+    suma de los importes de las lineas que pasan el filtro. El uso
+    recomendado es acotar con filtro_texto a un concepto concreto (p.ej.
+    "RECIBO /PayPal" o el nombre de un interlocutor) en vez de sumar el
+    extracto entero sin filtrar.
 
     Usa esta herramienta para preguntas tipo "¿cuanto suman los importes de
     este documento?" o, con filtro_texto, "¿cuanto suma el IVA de la
@@ -148,7 +166,14 @@ def sumar_importes(documento_id: int, filtro_texto: str | None = None) -> dict:
         documento_id: id del documento en Paperless.
         filtro_texto: si se indica, solo se procesan las lineas que lo
             contienen (sin distinguir mayusculas/minusculas). Sin filtro,
-            se procesan todas las lineas del documento.
+            se procesan todas las lineas del documento (salvo las de
+            SALDO, siempre excluidas). Uso recomendado para acotar la
+            suma a un concepto concreto.
+        solo_primero: si True (por defecto), de cada linea solo se toma
+            el primer importe detectado -- el movimiento, en un extracto
+            bancario tipico donde el segundo numero de la linea es el
+            saldo acumulado. Pon False para sumar todos los importes que
+            aparezcan en cada linea.
     """
     cab = _cabecera()
     if cab is None:
@@ -164,10 +189,15 @@ def sumar_importes(documento_id: int, filtro_texto: str | None = None) -> dict:
     filtro_normalizado = filtro_texto.lower() if filtro_texto else None
     total = Decimal("0")
     detalle = []
+    lineas_excluidas = 0
     for linea in contenido.splitlines():
         if filtro_normalizado is not None and filtro_normalizado not in linea.lower():
             continue
-        for valor in _parsear_importes_linea(linea):
+        importes, excluida = procesar_linea(linea, solo_primero)
+        if excluida:
+            lineas_excluidas += 1
+            continue
+        for valor in importes:
             total += valor
             detalle.append({"linea": linea.strip(), "importe": _formatear_importe(valor)})
 
@@ -176,6 +206,7 @@ def sumar_importes(documento_id: int, filtro_texto: str | None = None) -> dict:
         "filtro": filtro_texto,
         "total": _formatear_importe(total),
         "n_importes": len(detalle),
+        "lineas_excluidas": lineas_excluidas,
         "detalle": detalle,
     }
 
