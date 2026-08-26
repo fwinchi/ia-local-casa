@@ -4,7 +4,8 @@
 
 > Gestión documental y de fotos, autoalojada y con IA local: archiva, indexa y busca por contenido en tu propio PC, sin mandar tus documentos a la nube.
 
-[![Licencia del código: MIT](https://img.shields.io/badge/licencia%20c%C3%B3digo-MIT-blue.svg)](LICENSE)
+[![Licencia](https://img.shields.io/github/license/fwinchi/ia-local-casa.svg?label=licencia%20c%C3%B3digo)](LICENSE)
+[![Último commit](https://img.shields.io/github/last-commit/fwinchi/ia-local-casa.svg)](https://github.com/fwinchi/ia-local-casa/commits/main)
 [![Licencia de la documentación: CC BY 4.0](https://img.shields.io/badge/licencia%20docs-CC%20BY%204.0-lightgrey.svg)](LICENSE-docs)
 [![Python 3.14](https://img.shields.io/badge/python-3.14-3776AB.svg?logo=python&logoColor=white)](requirements.txt)
 [![Docker](https://img.shields.io/badge/docker-requerido-2496ED.svg?logo=docker&logoColor=white)](docker)
