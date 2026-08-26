@@ -30,10 +30,8 @@ BASE = Path(__file__).resolve().parent.parent   # antes: D:\paperless
 # mismo nombre de subcarpeta a proposito: antes se indexaba
 # OneDrive\Documentos entero y arrastraba basura (configs y logs de
 # videojuegos, cachés de DaVinci).
-CARPETAS_PDFS = [
-    (Path.home() / "OneDrive" / "Documentos" / "Documentos para indexar").resolve(),
-    (Path.home() / "Documents" / "Documentos para indexar").resolve(),
-]
+CARPETA_INDEXAR = (Path.home() / "Documents" / "Documentos para indexar").resolve()
+CARPETAS_PDFS = [CARPETA_INDEXAR]
 
 # ADVERTENCIA (GHSA-f4j7-r4q5-qw2c / CVE-2026-45829, ver
 # docs/vulnerabilidades-conocidas.md): chromadb 1.5.9 tiene un RCE en
@@ -77,10 +75,10 @@ EXT_VIDEO = {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mpg", ".mpeg", ".
 EXT_VIDEO_MOVIL = {".mp4", ".mov", ".avi", ".mkv", ".3gp", ".m4v", ".webm"}
 
 # --- Puente manual a Paperless (puente_paperless.py) ---
-# Derivadas de CARPETAS_PDFS[1] (la carpeta local, NO la de OneDrive): asi
+# Derivadas de CARPETA_INDEXAR (la carpeta local, NO la de OneDrive): asi
 # a_paperless/ y enviado/ no se sincronizan de mas a la nube por error.
-CARPETA_A_PAPERLESS = CARPETAS_PDFS[1] / "a_paperless"
-CARPETA_ENVIADO = CARPETAS_PDFS[1] / "enviado"
+CARPETA_A_PAPERLESS = CARPETA_INDEXAR / "a_paperless"
+CARPETA_ENVIADO = CARPETA_INDEXAR / "enviado"
 CARPETA_CONSUME = BASE / "consume"
 
 # --- Correo (mapear_mbox.py, indexar_correo.py, mcp_correo.py, copiar_gloda.py) ---

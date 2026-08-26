@@ -3,7 +3,7 @@ Puente manual entre la carpeta de documentos a indexar y la carpeta de
 consumo de Paperless (D:\\paperless\\consume).
 
 Flujo: cualquier documento que se deje a mano en a_paperless/ (subcarpeta
-de la carpeta local "Documentos para indexar", CARPETAS_PDFS[1] de
+de la carpeta local "Documentos para indexar", CARPETA_INDEXAR de
 config_rutas.py) se copia a CARPETA_CONSUME para que Paperless lo procese.
 Solo si la copia verifica bien (mismo tamano que el original), el original
 se mueve a enviado/ -- asi queda rastro de que ya se envio, sin borrar nada
