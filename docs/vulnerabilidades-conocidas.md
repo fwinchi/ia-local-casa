@@ -62,3 +62,52 @@ salte a la vista al tocar cualquier script que use Chroma.
 Revisar esta entrada de nuevo cuando Dependabot deje de marcar la alerta (parche
 publicado) o si se añade algún uso nuevo de `.add()`/`.upsert()`/`.query()`/`.get()` sin
 embedding explícito.
+
+## GHSA-36p7-vc44-83pf — ChromaDB, code injection vulnerability
+
+**Estado:** revisada el 26-08-2026. No explotable — PersistentClient embebido, sin
+servidor HTTP, sin auth multi-tenant, embeddings precalculados.
+
+- **Paquete:** `chromadb`, fijado en [`requirements.txt`](../requirements.txt) en
+  `1.5.9` — dentro del rango vulnerable (`>= 0.4.17, <= 1.5.9`).
+- **Parche:** ninguno publicado todavía (`first_patched_version` vacío en el advisory).
+- **Severidad:** crítica.
+
+Mismo vector de fondo que GHSA-f4j7-r4q5-qw2c (arriba): código de inyección en el SDK
+cliente que solo se dispara si Chroma calcula el embedding él mismo. La mitigación es la
+misma — todos los scripts pasan siempre el embedding ya calculado por Ollama, nunca
+`documents=`/`query_texts=` sin `embeddings=`/`query_embeddings=` — ver el aviso en
+[`scripts/config_rutas.py:37-47`](../scripts/config_rutas.py) y el desglose de llamadas
+revisadas en la entrada de arriba.
+
+## GHSA-2wm9-hf6c-p5cr — ChromaDB allows any authenticated users to arbitrarily read, write, update, or delete data in any tenant's collection
+
+**Estado:** revisada el 26-08-2026. No explotable — PersistentClient embebido, sin
+servidor HTTP, sin auth multi-tenant, embeddings precalculados.
+
+- **Paquete:** `chromadb`, fijado en [`requirements.txt`](../requirements.txt) en
+  `1.5.9` — dentro del rango vulnerable (`>= 0.4.17, <= 1.5.9`).
+- **Parche:** ninguno publicado todavía (`first_patched_version` vacío en el advisory).
+- **Severidad:** alta.
+
+El vector requiere un servidor Chroma multi-tenant con autenticación habilitada, donde un
+usuario autenticado en un tenant pueda leer/escribir la colección de otro. Se revisó cada
+script del repo que abre Chroma (`indexar_documentos.py`, `indexar_fotos.py`,
+`indexar_videos.py`, `mcp_documentos.py`, `mcp_fotos.py`, `buscar.py`, `salud.py`): todos
+usan `chromadb.PersistentClient(path=...)`, embebido en el propio proceso — sin servidor,
+sin tenants ni usuarios que autenticar. No hay superficie de ataque para este vector.
+
+## GHSA-xph7-9rjv-w5fr — ChromaDB's SimpleRBACAuthorizationProvider doesn't check which tenant, database, or collection a permission applies to
+
+**Estado:** revisada el 26-08-2026. No explotable — PersistentClient embebido, sin
+servidor HTTP, sin auth multi-tenant, embeddings precalculados.
+
+- **Paquete:** `chromadb`, fijado en [`requirements.txt`](../requirements.txt) en
+  `1.5.9` — dentro del rango vulnerable (`>= 0.5.0, <= 1.5.9`).
+- **Parche:** ninguno publicado todavía (`first_patched_version` vacío en el advisory).
+- **Severidad:** alta.
+
+El vector está en `SimpleRBACAuthorizationProvider`, un proveedor de autorización que solo
+existe en modo servidor con RBAC configurado. Este repo no instancia
+`SimpleRBACAuthorizationProvider` ni ningún servidor Chroma — cada script abre su propio
+`PersistentClient` local, sin capa de autorización que explotar.
