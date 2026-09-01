@@ -8,7 +8,7 @@
     scripts/backup-orangepi.bat, leidas de ese mismo archivo -- no hay ningun
     IP/usuario hardcodeado aqui.
 
-    1. Cuenta ficheros en fotos/, videos/, documentos/ y documentos-onedrive/
+    1. Cuenta ficheros en fotos/, videos/, documentos/
        en el NAS y los compara con el conteo de las carpetas de origen locales.
     2. ChromaDB: existencia y tamano de chroma/ en el NAS.
     3. immich-db/immich-db.dump: existe, los 5 primeros bytes son "PGDMP"
@@ -151,12 +151,11 @@ try {
     $problemas = @()
     $lineasLog = @()
 
-    # 1. Conteo de ficheros: fotos, videos, documentos, documentos-onedrive
+    # 1. Conteo de ficheros: fotos, videos, documentos
     $bloquesArchivos = @(
         @{ Nombre = 'Fotos';                Local = $FOTOS_LOCAL; Remoto = "$DB/fotos" }
         @{ Nombre = 'Videos';                Local = $VIDEOS_LOCAL; Remoto = "$DB/videos" }
         @{ Nombre = 'Documentos';            Local = "C:\Users\$($script:Vars.USUARIO_WINDOWS)\Documents\Documentos para indexar"; Remoto = "$DB/documentos" }
-        @{ Nombre = 'Documentos OneDrive';   Local = "C:\Users\$($script:Vars.USUARIO_WINDOWS)\OneDrive\Documentos\Documentos para indexar"; Remoto = "$DB/documentos-onedrive" }
     )
     foreach ($bloque in $bloquesArchivos) {
         $nLocal  = Contar-Local  -RutaLocal  $bloque.Local
